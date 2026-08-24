@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="dashboard-grid">
+    <div class="card">
+        <h3>Student Profile</h3>
+        <img src="{{ url_for('static', filename='uploads/' + current_user.passport_pic) }}" class="passport-img" alt="Passport">
+        <form method="POST" enctype="multipart/form-data" style="margin-top: 10px;">
+            <input type="file" name="passport" accept="image/*" required>
+            <button type="submit" class="btn btn-sm btn-secondary">Upload Passport</button>
+        </form>
+        <p><strong>Class:</strong> {{ current_user.assigned_class or 'Unassigned' }}</p>
+        <p><strong>Fee Clearance Status:</strong> 
+            {% if current_user.fee_paid %}
+                <span class="badge badge-success">CLEARED (PAID)</span>
+            {% else %}
+                <span class="badge badge-danger">OUTSTANDING</span>
+                <div style="margin-top: 15px;">
+                    <form method="POST" action="{{ url_for('initialize_payment') }}">
+                        <label><strong>Term School Fee (NGN):</strong></label>
+                        <input type="number" name="amount" value="50000" class="form-control" style="margin-bottom: 8px;" readonly>
+                        <button type="submit" class="btn btn-success">Pay Online (Bank Transfer / Card / USSD)</button>
+                    </form>
+                </div>
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="card">
+        <h3>Register Term Subjects</h3>
+        <form method="POST" action="{{ url_for('register_subjects') }}">
+            {% for subject in subjects %}
+                <div>
+                    <input type="checkbox" name="subject_ids" value="{{ subject.id }}"> {{ subject.name }}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Register Selected</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="margin-top:20px;">
+    <h3>Terminal Examination Results</h3>
+
+    {% if not results_published %}
+        <div class="alert alert-danger">
+            Term results are currently being compiled by the administration and have not yet been released.
+        </div>
+    {% elif not current_user.fee_paid %}
+        <div class="alert alert-danger">
+            Term results have been published, but online fee payment clearance is required to view or print your result statement.
+        </div>
+    {% else %}
+        <button onclick="window.print()" class="btn btn-secondary no-print" style="margin-bottom:15px;">Print Result Sheet</button>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total Score (100)</th><th>Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in results %}
+                <tr>
+                    <td>{{ res.subject.name }}</td>
+                    <td>{{ res.ca1_score }}</td>
+                    <td>{{ res.ca2_score }}</td>
+                    <td>{{ res.exam_score }}</td>
+                    <td><strong>{{ res.total_score }}</strong></td>
+                    <td>{{ res.grade }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+{% endblock %}
