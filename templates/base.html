@@ -12,7 +12,7 @@
         {% if current_user.is_authenticated %}
             <div>
                 <span>Logged in as: <strong>{{ current_user.full_name }}</strong> ({{ current_user.role|capitalize }})</span>
-                <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+                <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a> <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
             </div>
         {% endif %}
     </header>

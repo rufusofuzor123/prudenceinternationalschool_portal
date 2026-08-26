@@ -145,6 +145,34 @@ def login():
     return render_template("login.html")
 
 
+@app.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        current_pw = request.form.get("current_password")
+        new_pw = request.form.get("new_password")
+        confirm_pw = request.form.get("confirm_password")
+
+        if not current_user.check_password(current_pw):
+            flash("Current password is incorrect.", "danger")
+            return redirect(url_for("change_password"))
+
+        if not new_pw or len(new_pw) < 6:
+            flash("New password must be at least 6 characters.", "danger")
+            return redirect(url_for("change_password"))
+
+        if new_pw != confirm_pw:
+            flash("New password and confirmation do not match.", "danger")
+            return redirect(url_for("change_password"))
+
+        current_user.set_password(new_pw)
+        db.session.commit()
+        flash("Password changed successfully!", "success")
+        return redirect_role_dashboard(current_user.role)
+
+    return render_template("change_password.html")
+
+
 @app.route("/logout")
 @login_required
 def logout():
