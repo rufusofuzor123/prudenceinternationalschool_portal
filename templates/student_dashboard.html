@@ -54,7 +54,7 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total Score (100)</th><th>Grade</th>
+                    <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total Score (100)</th><th>Grade</th><th>Position in Subject</th><th>Subject Average</th>
                 </tr>
             </thead>
             <tbody>
@@ -66,10 +66,16 @@
                     <td>{{ res.exam_score }}</td>
                     <td><strong>{{ res.total_score }}</strong></td>
                     <td>{{ res.grade }}</td>
+                    <td>{% if subject_positions.get(res.subject_id) %}{{ subject_positions[res.subject_id][0] }} of {{ subject_positions[res.subject_id][1] }}{% else %}N/A{% endif %}</td>
+                    <td>{% if subject_positions.get(res.subject_id) %}{{ subject_positions[res.subject_id][2] }}{% else %}N/A{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        <p style="margin-top:15px;">
+            <strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}<br>
+            <strong>Overall Average:</strong> {{ class_average }}
+        </p>
     {% endif %}
 </div>
 {% endblock %}

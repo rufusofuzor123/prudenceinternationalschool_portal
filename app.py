@@ -180,6 +180,42 @@ def logout():
     return redirect(url_for("login"))
 
 
+def get_subject_positions(student):
+    positions = {}
+    classmates_ids = [
+        s.id for s in User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
+    ]
+    subject_ids = {r.subject_id for r in AcademicResult.query.filter_by(student_id=student.id).all()}
+    for subj_id in subject_ids:
+        subj_results = AcademicResult.query.filter(
+            AcademicResult.subject_id == subj_id,
+            AcademicResult.student_id.in_(classmates_ids)
+        ).all()
+        ranked = sorted(subj_results, key=lambda r: r.total_score, reverse=True)
+        for idx, r in enumerate(ranked, start=1):
+            if r.student_id == student.id:
+                positions[subj_id] = (idx, len(ranked))
+        subject_total = sum(r.total_score for r in subj_results)
+        subject_avg = round(subject_total / len(subj_results), 2) if subj_results else 0
+        positions.setdefault(subj_id, (None, len(ranked)))
+        positions[subj_id] = positions[subj_id] + (subject_avg,)
+    return positions
+
+
+def get_class_position(student):
+    classmates = User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
+    averages = []
+    for s in classmates:
+        s_results = AcademicResult.query.filter_by(student_id=s.id).all()
+        avg = round(sum(r.total_score for r in s_results) / len(s_results), 2) if s_results else 0
+        averages.append((s.id, avg))
+    averages.sort(key=lambda x: x[1], reverse=True)
+    for idx, (sid, avg) in enumerate(averages, start=1):
+        if sid == student.id:
+            return idx, len(averages), avg
+    return None, len(averages), 0
+
+
 @app.route("/student/dashboard", methods=["GET", "POST"])
 @login_required
 def student_dashboard():
@@ -201,11 +237,18 @@ def student_dashboard():
             flash("Passport uploaded successfully!", "success")
             return redirect(url_for("student_dashboard"))
 
+    subject_positions = get_subject_positions(current_user)
+    class_pos, class_total, class_avg = get_class_position(current_user)
+
     return render_template(
         "student_dashboard.html",
         subjects=available_subjects,
         results=results,
-        results_published=published
+        results_published=published,
+        subject_positions=subject_positions,
+        class_position=class_pos,
+        class_total=class_total,
+        class_average=class_avg
     )
 
 
