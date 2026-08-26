@@ -84,12 +84,14 @@ class AcademicResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey("sessions.id"), nullable=True)
     term = db.Column(db.String(20), nullable=False, default="First Term")
     ca1_score = db.Column(db.Float, default=0.0)
     ca2_score = db.Column(db.Float, default=0.0)
     exam_score = db.Column(db.Float, default=0.0)
 
     subject = db.relationship("Subject", backref="results")
+    session = db.relationship("Session", backref="results")
 
     @property
     def total_score(self) -> float:
@@ -180,17 +182,28 @@ def logout():
     return redirect(url_for("login"))
 
 
+def get_current_session():
+    return Session.query.filter_by(is_current=True).first()
+
+
 def get_subject_positions(student):
     positions = {}
+    current_session = get_current_session()
     classmates_ids = [
         s.id for s in User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
     ]
-    subject_ids = {r.subject_id for r in AcademicResult.query.filter_by(student_id=student.id).all()}
+    result_filter = {"student_id": student.id}
+    if current_session:
+        result_filter["session_id"] = current_session.id
+    subject_ids = {r.subject_id for r in AcademicResult.query.filter_by(**result_filter).all()}
     for subj_id in subject_ids:
-        subj_results = AcademicResult.query.filter(
+        conditions = [
             AcademicResult.subject_id == subj_id,
             AcademicResult.student_id.in_(classmates_ids)
-        ).all()
+        ]
+        if current_session:
+            conditions.append(AcademicResult.session_id == current_session.id)
+        subj_results = AcademicResult.query.filter(*conditions).all()
         ranked = sorted(subj_results, key=lambda r: r.total_score, reverse=True)
         for idx, r in enumerate(ranked, start=1):
             if r.student_id == student.id:
@@ -203,10 +216,14 @@ def get_subject_positions(student):
 
 
 def get_class_position(student):
+    current_session = get_current_session()
     classmates = User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
     averages = []
     for s in classmates:
-        s_results = AcademicResult.query.filter_by(student_id=s.id).all()
+        s_filter = {"student_id": s.id}
+        if current_session:
+            s_filter["session_id"] = current_session.id
+        s_results = AcademicResult.query.filter_by(**s_filter).all()
         avg = round(sum(r.total_score for r in s_results) / len(s_results), 2) if s_results else 0
         averages.append((s.id, avg))
     averages.sort(key=lambda x: x[1], reverse=True)
@@ -223,7 +240,11 @@ def student_dashboard():
         abort(403)
 
     available_subjects = Subject.query.all()
-    results = AcademicResult.query.filter_by(student_id=current_user.id).all()
+    current_session = get_current_session()
+    result_filter = {"student_id": current_user.id}
+    if current_session:
+        result_filter["session_id"] = current_session.id
+    results = AcademicResult.query.filter_by(**result_filter).all()
     published = is_results_published()
 
     if request.method == "POST" and "passport" in request.files:
@@ -258,10 +279,18 @@ def register_subjects():
     if current_user.role != "student":
         abort(403)
 
+    current_session = get_current_session()
     selected_subject_ids = request.form.getlist("subject_ids")
-    AcademicResult.query.filter_by(student_id=current_user.id).delete()
+    delete_filter = {"student_id": current_user.id}
+    if current_session:
+        delete_filter["session_id"] = current_session.id
+    AcademicResult.query.filter_by(**delete_filter).delete()
     for sub_id in selected_subject_ids:
-        res = AcademicResult(student_id=current_user.id, subject_id=int(sub_id))
+        res = AcademicResult(
+            student_id=current_user.id,
+            subject_id=int(sub_id),
+            session_id=current_session.id if current_session else None
+        )
         db.session.add(res)
 
     db.session.commit()
@@ -352,7 +381,11 @@ def enter_grades(student_id: int):
     if current_user.role != "teacher":
         abort(403)
 
-    results = AcademicResult.query.filter_by(student_id=student_id).all()
+    current_session = get_current_session()
+    grade_filter = {"student_id": student_id}
+    if current_session:
+        grade_filter["session_id"] = current_session.id
+    results = AcademicResult.query.filter_by(**grade_filter).all()
     for res in results:
         ca1 = request.form.get(f"ca1_{res.id}", 0)
         ca2 = request.form.get(f"ca2_{res.id}", 0)
@@ -463,6 +496,14 @@ def toggle_results():
 
 with app.app_context():
     db.create_all()
+
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    existing_columns = [col["name"] for col in inspector.get_columns("academic_results")]
+    if "session_id" not in existing_columns:
+        db.session.execute(text("ALTER TABLE academic_results ADD COLUMN session_id INTEGER REFERENCES sessions(id)"))
+        db.session.commit()
+
     if not User.query.filter_by(username="admin").first():
         default_admin = User(
             username="admin",
