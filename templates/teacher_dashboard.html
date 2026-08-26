@@ -11,7 +11,7 @@
                 <tr><th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th></tr>
             </thead>
             <tbody>
-                {% for res in student.academic_results %}
+                {% for res in student.filtered_results %}
                 <tr>
                     <td>{{ res.subject.name }}</td>
                     <td><input type="number" step="0.1" name="ca1_{{ res.id }}" value="{{ res.ca1_score }}" max="20" class="form-control"></td>

@@ -92,6 +92,7 @@ class AcademicResult(db.Model):
 
     subject = db.relationship("Subject", backref="results")
     session = db.relationship("Session", backref="results")
+    student = db.relationship("User", backref="academic_results")
 
     @property
     def total_score(self) -> float:
@@ -372,6 +373,12 @@ def teacher_dashboard():
         abort(403)
 
     class_students = User.query.filter_by(role="student", assigned_class=current_user.assigned_class).all()
+    current_session = get_current_session()
+    for s in class_students:
+        result_filter = {"student_id": s.id}
+        if current_session:
+            result_filter["session_id"] = current_session.id
+        s.filtered_results = AcademicResult.query.filter_by(**result_filter).all()
     return render_template("teacher_dashboard.html", students=class_students)
 
 
