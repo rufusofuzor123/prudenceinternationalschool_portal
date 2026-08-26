@@ -1,15 +1,3 @@
-éclass AcademicResult(db.model):
-class SchoolClass(db.Model):
-    __tablename__ = "school_classes"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-
-
-class Session(db.Model):
-    __tablename__ = "sessions"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(20), unique=True, nullable=False)
-    is_current = db.Column(db.Boolean, default=False)
 import os
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, abort
@@ -76,6 +64,19 @@ class Subject(db.Model):
     __tablename__ = "subjects"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+
+
+class SchoolClass(db.Model):
+    __tablename__ = "school_classes"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+
+
+class Session(db.Model):
+    __tablename__ = "sessions"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), unique=True, nullable=False)
+    is_current = db.Column(db.Boolean, default=False)
 
 
 class AcademicResult(db.Model):
@@ -332,7 +333,8 @@ def admin_dashboard():
                 db.session.add(Subject(name=sub_name))
                 db.session.commit()
                 flash("Subject added to portal system!", "success")
-elif action == "create_class":
+
+        elif action == "create_class":
             class_name = request.form.get("class_name")
             if class_name and not SchoolClass.query.filter_by(name=class_name).first():
                 db.session.add(SchoolClass(name=class_name))
@@ -353,10 +355,10 @@ elif action == "create_class":
             if selected:
                selected.is_current = True
             db.session.commit()
-            flas("Current session updated!", "success")
+            flash("Current session updated!", "success")
 
 
-users = User.query.all()
+    users = User.query.all()
     subjects = Subject.query.all()
     classes = SchoolClass.query.all()
     sessions = Session.query.all()
