@@ -8,7 +8,7 @@
     <form method="POST" action="{{ url_for('enter_grades', student_id=student.id) }}">
         <table class="data-table">
             <thead>
-                <tr><th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th></tr>
+                <tr><th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total (Saved)</th><th>Grade (Saved)</th></tr>
             </thead>
             <tbody>
                 {% for res in student.filtered_results %}
@@ -17,6 +17,8 @@
                     <td><input type="number" step="0.1" name="ca1_{{ res.id }}" value="{{ res.ca1_score }}" max="20" class="form-control"></td>
                     <td><input type="number" step="0.1" name="ca2_{{ res.id }}" value="{{ res.ca2_score }}" max="20" class="form-control"></td>
                     <td><input type="number" step="0.1" name="exam_{{ res.id }}" value="{{ res.exam_score }}" max="60" class="form-control"></td>
+                    <td>{{ res.total_score }}</td>
+                    <td>{{ res.grade }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
