@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Teacher Dashboard — Assigned Class: {{ current_user.assigned_class }}</h2>
+<a href="{{ url_for('mark_attendance') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">Mark Attendance</a>
 
 {% for student in students %}
 <div class="card" style="margin-bottom: 20px;">

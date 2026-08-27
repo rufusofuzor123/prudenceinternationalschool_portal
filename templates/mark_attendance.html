@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Attendance Register — {{ current_user.assigned_class }}</h2>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ today }}" class="form-control" required>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Student Name</th><th>Present</th><th>Absent</th><th>Late</th></tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student.full_name }}</td>
+                        <td><input type="radio" name="status_{{ student.id }}" value="Present" checked></td>
+                        <td><input type="radio" name="status_{{ student.id }}" value="Absent"></td>
+                        <td><input type="radio" name="status_{{ student.id }}" value="Late"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:15px;">Save Attendance</button>
+    </form>
+</div>
+{% endblock %}

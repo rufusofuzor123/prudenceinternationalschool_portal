@@ -79,6 +79,18 @@ class Session(db.Model):
     is_current = db.Column(db.Boolean, default=False)
 
 
+class Attendance(db.Model):
+    __tablename__ = "attendance"
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey("sessions.id"), nullable=True)
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(10), nullable=False, default="Present")
+
+    student = db.relationship("User", backref="attendance_records")
+    session = db.relationship("Session", backref="attendance_records")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -262,6 +274,14 @@ def student_dashboard():
     subject_positions = get_subject_positions(current_user)
     class_pos, class_total, class_avg = get_class_position(current_user)
 
+    attendance_filter = {"student_id": current_user.id}
+    if current_session:
+        attendance_filter["session_id"] = current_session.id
+    attendance_records = Attendance.query.filter_by(**attendance_filter).order_by(Attendance.date.desc()).all()
+    present_count = sum(1 for a in attendance_records if a.status == "Present")
+    absent_count = sum(1 for a in attendance_records if a.status == "Absent")
+    late_count = sum(1 for a in attendance_records if a.status == "Late")
+
     return render_template(
         "student_dashboard.html",
         subjects=available_subjects,
@@ -270,7 +290,11 @@ def student_dashboard():
         subject_positions=subject_positions,
         class_position=class_pos,
         class_total=class_total,
-        class_average=class_avg
+        class_average=class_avg,
+        attendance_records=attendance_records,
+        present_count=present_count,
+        absent_count=absent_count,
+        late_count=late_count
     )
 
 
@@ -404,6 +428,42 @@ def enter_grades(student_id: int):
     db.session.commit()
     flash("Student grades updated successfully!", "success")
     return redirect(url_for("teacher_dashboard"))
+
+
+@app.route("/teacher/attendance", methods=["GET", "POST"])
+@login_required
+def mark_attendance():
+    if current_user.role != "teacher":
+        abort(403)
+
+    from datetime import date as date_cls
+    current_session = get_current_session()
+    class_students = User.query.filter_by(role="student", assigned_class=current_user.assigned_class).all()
+
+    if request.method == "POST":
+        selected_date = request.form.get("date")
+        for student in class_students:
+            status = request.form.get(f"status_{student.id}", "Present")
+            existing = Attendance.query.filter_by(
+                student_id=student.id,
+                date=selected_date,
+                session_id=current_session.id if current_session else None
+            ).first()
+            if existing:
+                existing.status = status
+            else:
+                db.session.add(Attendance(
+                    student_id=student.id,
+                    date=selected_date,
+                    status=status,
+                    session_id=current_session.id if current_session else None
+                ))
+        db.session.commit()
+        flash("Attendance saved successfully!", "success")
+        return redirect(url_for("mark_attendance"))
+
+    today = date_cls.today().isoformat()
+    return render_template("mark_attendance.html", students=class_students, today=today)
 
 
 @app.route("/admin/dashboard", methods=["GET", "POST"])
