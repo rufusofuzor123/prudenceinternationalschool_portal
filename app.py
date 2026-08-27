@@ -553,7 +553,10 @@ def reset_portal_data():
         flash("You must type RESET exactly to confirm data wipe.", "danger")
         return redirect(url_for("admin_dashboard"))
 
-    db.drop_all()
+    from sqlalchemy import text
+    db.session.execute(text("DROP SCHEMA public CASCADE"))
+    db.session.execute(text("CREATE SCHEMA public"))
+    db.session.commit()
     db.create_all()
 
     default_admin = User(
