@@ -6,7 +6,8 @@
 <div class="card" style="margin-bottom: 20px;">
     <h3>Student: {{ student.full_name }} ({{ student.username }})</h3>
     <form method="POST" action="{{ url_for('enter_grades', student_id=student.id) }}">
-        <table class="data-table">
+        <div class="table-wrapper">
+<table class="data-table">
             <thead>
                 <tr><th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total (Saved)</th><th>Grade (Saved)</th></tr>
             </thead>
@@ -23,6 +24,7 @@
                 {% endfor %}
             </tbody>
         </table>
+</div>
         <button type="submit" class="btn btn-primary" style="margin-top:10px;">Save Marks for {{ student.full_name }}</button>
     </form>
 </div>

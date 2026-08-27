@@ -12,7 +12,8 @@ body { font-family: Arial, sans-serif; background: #D2B48C; margin: 0; padding: 
 .btn-success { background: #28a745; }
 .btn-danger { background: #dc3545; }
 .btn-sm { padding: 4px 8px; font-size: 12px; }
-.data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+.table-wrapper { overflow-x: auto; margin-top: 15px; }
+.data-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .data-table th, .data-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
 .data-table th { background: #f0f0f0; }
 .passport-img { width: 120px; height: 120px; border-radius: 4px; object-fit: cover; border: 1px solid #ddd; }

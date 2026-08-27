@@ -51,7 +51,8 @@
         </div>
     {% else %}
         <button onclick="window.print()" class="btn btn-secondary no-print" style="margin-bottom:15px;">Print Result Sheet</button>
-        <table class="data-table">
+        <div class="table-wrapper">
+<table class="data-table">
             <thead>
                 <tr>
                     <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total Score (100)</th><th>Grade</th><th>Position in Subject</th><th>Subject Average</th>
@@ -72,6 +73,7 @@
                 {% endfor %}
             </tbody>
         </table>
+</div>
         <p style="margin-top:15px;">
             <strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}<br>
             <strong>Overall Average:</strong> {{ class_average }}
