@@ -542,6 +542,35 @@ def admin_dashboard():
         sessions=sessions,
         results_published=published
     )
+@app.route("/admin/reset-portal-data", methods=["POST"])
+@login_required
+def reset_portal_data():
+    if current_user.role != "admin":
+        abort(403)
+
+    confirm_text = request.form.get("confirm_text")
+    if confirm_text != "RESET":
+        flash("You must type RESET exactly to confirm data wipe.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    db.drop_all()
+    db.create_all()
+
+    default_admin = User(
+        username="admin",
+        full_name="School Administrator",
+        email="admin@prudence.edu.ng",
+        role="admin"
+    )
+    default_admin.set_password("AdminPass123!")
+    db.session.add(default_admin)
+    db.session.add(SystemSetting(key="publish_results", value="false"))
+    db.session.commit()
+
+    flash("Portal data has been reset. Log in fresh with the default admin account.", "success")
+    return redirect(url_for("login"))
+
+
 @app.route("/admin/toggle-results", methods=["POST"])
 @login_required
 def toggle_results():

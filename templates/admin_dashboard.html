@@ -2,6 +2,15 @@
 {% block content %}
 <h2>Admin Control Panel</h2>
 
+<div class="card" style="margin-bottom:20px; border: 2px solid #dc3545;">
+    <h3 style="color:#dc3545;">Danger Zone — Reset Portal Data</h3>
+    <p>This permanently deletes ALL users, classes, sessions, subjects, results, and attendance. Type <strong>RESET</strong> below to confirm.</p>
+    <form method="POST" action="{{ url_for('reset_portal_data') }}" onsubmit="return confirm('This will permanently delete ALL portal data. Are you absolutely sure?');">
+        <input type="text" name="confirm_text" class="form-control" placeholder="Type RESET to confirm" required style="margin-bottom:10px;">
+        <button type="submit" class="btn btn-danger">Wipe All Data</button>
+    </form>
+</div>
+
 <div class="card" style="margin-bottom: 20px;">
     <h3>Result Publication Status & Control</h3>
     <p>Current Portal Mode: 

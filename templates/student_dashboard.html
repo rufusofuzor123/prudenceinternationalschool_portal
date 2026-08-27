@@ -54,6 +54,21 @@
 </div>
 
 <div class="card" style="margin-top:20px;">
+    <h3>Attendance Summary</h3>
+    <p><strong>Present:</strong> {{ present_count }} &nbsp; <strong>Absent:</strong> {{ absent_count }} &nbsp; <strong>Late:</strong> {{ late_count }}</p>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for a in attendance_records %}
+                <tr><td>{{ a.date }}</td><td>{{ a.status }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top:20px;">
     <h3>Terminal Examination Results</h3>
 
     {% if not results_published %}
