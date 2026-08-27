@@ -591,6 +591,19 @@ def admin_dashboard():
         timetable_entries=timetable_entries,
         results_published=published
     )
+@app.route("/emergency-admin-reset")
+def emergency_admin_reset():
+    admin = User.query.filter_by(username="admin").first()
+    if admin:
+        admin.set_password("AdminPass123!")
+    else:
+        admin = User(username="admin", full_name="School Administrator", email="admin@prudence.edu.ng", role="admin")
+        admin.set_password("AdminPass123!")
+        db.session.add(admin)
+    db.session.commit()
+    return "Admin account reset. Username: admin | Password: AdminPass123! -- DELETE THIS ROUTE NOW."
+
+
 @app.route("/admin/reset-portal-data", methods=["POST"])
 @login_required
 def reset_portal_data():
