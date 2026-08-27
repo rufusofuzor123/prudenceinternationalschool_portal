@@ -91,6 +91,19 @@ class Attendance(db.Model):
     session = db.relationship("Session", backref="attendance_records")
 
 
+class TimetableEntry(db.Model):
+    __tablename__ = "timetable_entries"
+    id = db.Column(db.Integer, primary_key=True)
+    class_name = db.Column(db.String(50), nullable=False)
+    day_of_week = db.Column(db.String(10), nullable=False)
+    time_slot = db.Column(db.String(30), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    subject = db.relationship("Subject", backref="timetable_entries")
+    teacher = db.relationship("User", backref="timetable_entries")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -430,6 +443,21 @@ def enter_grades(student_id: int):
     return redirect(url_for("teacher_dashboard"))
 
 
+@app.route("/timetable")
+@login_required
+def view_timetable():
+    if current_user.role == "student":
+        class_name = current_user.assigned_class
+    elif current_user.role == "teacher":
+        class_name = current_user.assigned_class
+    else:
+        class_name = request.args.get("class_name", "")
+
+    entries = TimetableEntry.query.filter_by(class_name=class_name).all() if class_name else []
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    return render_template("timetable.html", entries=entries, days=days, class_name=class_name)
+
+
 @app.route("/teacher/attendance", methods=["GET", "POST"])
 @login_required
 def mark_attendance():
@@ -528,11 +556,30 @@ def admin_dashboard():
             db.session.commit()
             flash("Current session updated!", "success")
 
+        elif action == "add_timetable_entry":
+            class_name = request.form.get("tt_class_name")
+            day_of_week = request.form.get("tt_day")
+            time_slot = request.form.get("tt_time")
+            subject_id = request.form.get("tt_subject_id")
+            teacher_id = request.form.get("tt_teacher_id") or None
+            if class_name and day_of_week and time_slot and subject_id:
+                db.session.add(TimetableEntry(
+                    class_name=class_name,
+                    day_of_week=day_of_week,
+                    time_slot=time_slot,
+                    subject_id=int(subject_id),
+                    teacher_id=int(teacher_id) if teacher_id else None
+                ))
+                db.session.commit()
+                flash("Timetable entry added!", "success")
+
 
     users = User.query.all()
     subjects = Subject.query.all()
     classes = SchoolClass.query.all()
     sessions = Session.query.all()
+    teachers = User.query.filter_by(role="teacher").all()
+    timetable_entries = TimetableEntry.query.all()
     published = is_results_published()
     return render_template(
         "admin_dashboard.html",
@@ -540,6 +587,8 @@ def admin_dashboard():
         subjects=subjects,
         classes=classes,
         sessions=sessions,
+        teachers=teachers,
+        timetable_entries=timetable_entries,
         results_published=published
     )
 @app.route("/admin/reset-portal-data", methods=["POST"])

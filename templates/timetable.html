@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Timetable {% if class_name %}— {{ class_name }}{% endif %}</h2>
+
+{% if not class_name %}
+<div class="alert alert-danger">No class assigned. Contact the administrator.</div>
+{% else %}
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th></tr></thead>
+        <tbody>
+            {% for day in days %}
+                {% for e in entries if e.day_of_week == day %}
+                <tr>
+                    <td>{{ e.day_of_week }}</td>
+                    <td>{{ e.time_slot }}</td>
+                    <td>{{ e.subject.name }}</td>
+                    <td>{{ e.teacher.full_name if e.teacher else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

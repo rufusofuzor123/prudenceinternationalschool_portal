@@ -102,6 +102,72 @@
     </div>
 </div>
 
+<div class="dashboard-grid" style="margin-top:20px;">
+    <div class="card">
+        <h3>Add Timetable Entry</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_timetable_entry">
+            <div class="form-group">
+                <label>Class</label>
+                <select name="tt_class_name" class="form-control">
+                    {% for c in classes %}
+                    <option value="{{ c.name }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Day</label>
+                <select name="tt_day" class="form-control">
+                    <option>Monday</option>
+                    <option>Tuesday</option>
+                    <option>Wednesday</option>
+                    <option>Thursday</option>
+                    <option>Friday</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Time (e.g. 8:00-8:40am)</label><input type="text" name="tt_time" class="form-control" required></div>
+            <div class="form-group">
+                <label>Subject</label>
+                <select name="tt_subject_id" class="form-control">
+                    {% for s in subjects %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Teacher (optional)</label>
+                <select name="tt_teacher_id" class="form-control">
+                    <option value="">-- None --</option>
+                    {% for t in teachers %}
+                    <option value="{{ t.id }}">{{ t.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Entry</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Current Timetable Entries</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Class</th><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th></tr></thead>
+                <tbody>
+                    {% for e in timetable_entries %}
+                    <tr>
+                        <td>{{ e.class_name }}</td>
+                        <td>{{ e.day_of_week }}</td>
+                        <td>{{ e.time_slot }}</td>
+                        <td>{{ e.subject.name }}</td>
+                        <td>{{ e.teacher.full_name if e.teacher else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="card" style="margin-top:20px;">
     <h3>Registered Portal Users</h3>
     <div class="table-wrapper">
