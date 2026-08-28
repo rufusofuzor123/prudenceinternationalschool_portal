@@ -18,7 +18,7 @@
                 <div style="margin-top: 15px;">
                     <form method="POST" action="{{ url_for('initialize_payment') }}">
                         <label><strong>Term School Fee (NGN):</strong></label>
-                        <input type="number" name="amount" value="50000" class="form-control" style="margin-bottom: 8px;" readonly>
+                        <input type="number" name="amount" value="{{ student_fee }}" class="form-control" style="margin-bottom: 8px;" readonly>
                         <button type="submit" class="btn btn-success">Pay Online (Bank Transfer / Card / USSD)</button>
                     </form>
                 </div>

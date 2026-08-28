@@ -104,6 +104,17 @@ class TimetableEntry(db.Model):
     teacher = db.relationship("User", backref="timetable_entries")
 
 
+class FeeStructure(db.Model):
+    __tablename__ = "fee_structures"
+    id = db.Column(db.Integer, primary_key=True)
+    class_name = db.Column(db.String(50), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey("sessions.id"), nullable=True)
+    term = db.Column(db.String(20), nullable=False, default="First Term")
+    amount = db.Column(db.Float, nullable=False)
+
+    session = db.relationship("Session", backref="fee_structures")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -208,6 +219,15 @@ def logout():
     return redirect(url_for("login"))
 
 
+def get_student_fee(student):
+    current_session = get_current_session()
+    query = FeeStructure.query.filter_by(class_name=student.assigned_class)
+    if current_session:
+        query = query.filter_by(session_id=current_session.id)
+    fee = query.first()
+    return fee.amount if fee else 50000.0
+
+
 def get_current_session():
     return Session.query.filter_by(is_current=True).first()
 
@@ -295,6 +315,8 @@ def student_dashboard():
     absent_count = sum(1 for a in attendance_records if a.status == "Absent")
     late_count = sum(1 for a in attendance_records if a.status == "Late")
 
+    student_fee = get_student_fee(current_user)
+
     return render_template(
         "student_dashboard.html",
         subjects=available_subjects,
@@ -307,7 +329,8 @@ def student_dashboard():
         attendance_records=attendance_records,
         present_count=present_count,
         absent_count=absent_count,
-        late_count=late_count
+        late_count=late_count,
+        student_fee=student_fee
     )
 
 
@@ -342,7 +365,7 @@ def initialize_payment():
     if current_user.role != "student":
         abort(403)
 
-    amount_in_naira = float(request.form.get("amount", 50000))
+    amount_in_naira = get_student_fee(current_user)
     amount_in_kobo = int(amount_in_naira * 100)
     student_email = current_user.email or f"{current_user.username}@prudence.edu.ng"
 
@@ -556,6 +579,29 @@ def admin_dashboard():
             db.session.commit()
             flash("Current session updated!", "success")
 
+        elif action == "add_fee_structure":
+            fs_class_name = request.form.get("fs_class_name")
+            fs_amount = request.form.get("fs_amount")
+            fs_term = request.form.get("fs_term", "First Term")
+            current_session = get_current_session()
+            if fs_class_name and fs_amount:
+                existing = FeeStructure.query.filter_by(
+                    class_name=fs_class_name,
+                    term=fs_term,
+                    session_id=current_session.id if current_session else None
+                ).first()
+                if existing:
+                    existing.amount = float(fs_amount)
+                else:
+                    db.session.add(FeeStructure(
+                        class_name=fs_class_name,
+                        term=fs_term,
+                        amount=float(fs_amount),
+                        session_id=current_session.id if current_session else None
+                    ))
+                db.session.commit()
+                flash("Fee structure saved!", "success")
+
         elif action == "add_timetable_entry":
             class_name = request.form.get("tt_class_name")
             day_of_week = request.form.get("tt_day")
@@ -580,6 +626,7 @@ def admin_dashboard():
     sessions = Session.query.all()
     teachers = User.query.filter_by(role="teacher").all()
     timetable_entries = TimetableEntry.query.all()
+    fee_structures = FeeStructure.query.all()
     published = is_results_published()
     return render_template(
         "admin_dashboard.html",
@@ -589,6 +636,7 @@ def admin_dashboard():
         sessions=sessions,
         teachers=teachers,
         timetable_entries=timetable_entries,
+        fee_structures=fee_structures,
         results_published=published
     )
 @app.route("/admin/reset-portal-data", methods=["POST"])
