@@ -7,22 +7,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header class="navbar">
+    <header class="school-header">
         <div style="display:flex; align-items:center; gap:15px;">
-            <div style="width:60px; height:60px; background:#ffffff33; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center; flex-shrink:0;">LOGO</div>
+            <div style="width:60px; height:60px; background:#00336622; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center; flex-shrink:0;">LOGO</div>
             <div>
                 <h2 style="margin:0;">Prudence International School Portal</h2>
                 <p style="margin:2px 0 0 0; font-size:13px; font-style:italic;">Knowledge, Character, Excellence</p>
                 <p style="margin:2px 0 0 0; font-size:12px;">Okpanam, Delta State</p>
             </div>
         </div>
-        {% if current_user.is_authenticated %}
-            <div>
-                <span>Logged in as: <strong>{{ current_user.full_name }}</strong> ({{ current_user.role|capitalize }})</span>
-                <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a> <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
-            </div>
-        {% endif %}
     </header>
+    {% if current_user.is_authenticated %}
+    <div class="navbar no-print">
+        <span>Logged in as: <strong>{{ current_user.full_name }}</strong> ({{ current_user.role|capitalize }})</span>
+        <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a> <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+    {% endif %}
     <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
