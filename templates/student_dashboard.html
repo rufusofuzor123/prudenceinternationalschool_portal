@@ -1,32 +1,34 @@
 {% extends 'base.html' %}
 {% block content %}
-<a href="{{ url_for('view_timetable') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">View Timetable</a>
+<a href="{{ url_for('view_timetable') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">View Timetable</a>
 <div class="dashboard-grid">
     <div class="card">
         <h3>Student Profile</h3>
         <img src="{{ url_for('static', filename='uploads/' + current_user.passport_pic) }}" class="passport-img" alt="Passport">
-        <form method="POST" enctype="multipart/form-data" style="margin-top: 10px;">
+        <form method="POST" enctype="multipart/form-data" style="margin-top: 10px;" class="no-print">
             <input type="file" name="passport" accept="image/*" required>
             <button type="submit" class="btn btn-sm btn-secondary">Upload Passport</button>
         </form>
         <p><strong>Class:</strong> {{ current_user.assigned_class or 'Unassigned' }}</p>
-        <p><strong>Fee Clearance Status:</strong> 
-            {% if current_user.fee_paid %}
-                <span class="badge badge-success">CLEARED (PAID)</span>
-            {% else %}
-                <span class="badge badge-danger">OUTSTANDING</span>
-                <div style="margin-top: 15px;">
-                    <form method="POST" action="{{ url_for('initialize_payment') }}">
-                        <label><strong>Term School Fee (NGN):</strong></label>
-                        <input type="number" name="amount" value="{{ student_fee }}" class="form-control" style="margin-bottom: 8px;" readonly>
-                        <button type="submit" class="btn btn-success">Pay Online (Bank Transfer / Card / USSD)</button>
-                    </form>
-                </div>
-            {% endif %}
-        </p>
+        <div class="no-print">
+            <p><strong>Fee Clearance Status:</strong>
+                {% if current_user.fee_paid %}
+                    <span class="badge badge-success">CLEARED (PAID)</span>
+                {% else %}
+                    <span class="badge badge-danger">OUTSTANDING</span>
+                    <div style="margin-top: 15px;">
+                        <form method="POST" action="{{ url_for('initialize_payment') }}">
+                            <label><strong>Term School Fee (NGN):</strong></label>
+                            <input type="number" name="amount" value="{{ student_fee }}" class="form-control" style="margin-bottom: 8px;" readonly>
+                            <button type="submit" class="btn btn-success">Pay Online (Bank Transfer / Card / USSD)</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </p>
+        </div>
     </div>
 
-    <div class="card">
+    <div class="card no-print">
         <h3>Register Term Subjects</h3>
         <form method="POST" action="{{ url_for('register_subjects') }}">
             {% for subject in subjects %}
@@ -39,22 +41,7 @@
     </div>
 </div>
 
-<div class="card" style="margin-top:20px;">
-    <h3>Attendance Summary</h3>
-    <p><strong>Present:</strong> {{ present_count }} &nbsp; <strong>Absent:</strong> {{ absent_count }} &nbsp; <strong>Late:</strong> {{ late_count }}</p>
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead><tr><th>Date</th><th>Status</th></tr></thead>
-            <tbody>
-                {% for a in attendance_records %}
-                <tr><td>{{ a.date }}</td><td>{{ a.status }}</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div class="card" style="margin-top:20px;">
+<div class="card no-print" style="margin-top:20px;">
     <h3>Attendance Summary</h3>
     <p><strong>Present:</strong> {{ present_count }} &nbsp; <strong>Absent:</strong> {{ absent_count }} &nbsp; <strong>Late:</strong> {{ late_count }}</p>
     <div class="table-wrapper">
@@ -83,7 +70,7 @@
     {% else %}
         <button onclick="window.print()" class="btn btn-secondary no-print" style="margin-bottom:15px;">Print Result Sheet</button>
         <div class="table-wrapper">
-<table class="data-table">
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total Score (100)</th><th>Grade</th><th>Position in Subject</th><th>Subject Average</th>
@@ -104,7 +91,7 @@
                 {% endfor %}
             </tbody>
         </table>
-</div>
+        </div>
         <p style="margin-top:15px;">
             <strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}<br>
             <strong>Overall Average:</strong> {{ class_average }}
