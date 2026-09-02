@@ -1,6 +1,18 @@
 {% extends 'base.html' %}
 {% block content %}
 <a href="{{ url_for('view_timetable') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">View Timetable</a>
+
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>Notice Board</h3>
+    {% for n in notices %}
+    <div style="border-bottom:1px solid #eee; padding:8px 0;">
+        <strong>{{ n.title }}</strong> <span style="font-size:12px; color:#666;">({{ n.date_posted.strftime('%d %b %Y') }})</span>
+        <p style="margin:4px 0 0 0;">{{ n.body }}</p>
+    </div>
+    {% else %}
+    <p>No notices posted yet.</p>
+    {% endfor %}
+</div>
 <div class="dashboard-grid">
     <div class="card">
         <h3>Student Profile</h3>

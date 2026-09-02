@@ -115,6 +115,14 @@ class FeeStructure(db.Model):
     session = db.relationship("Session", backref="fee_structures")
 
 
+class Notice(db.Model):
+    __tablename__ = "notices"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False)
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -316,9 +324,11 @@ def student_dashboard():
     late_count = sum(1 for a in attendance_records if a.status == "Late")
 
     student_fee = get_student_fee(current_user)
+    notices = Notice.query.order_by(Notice.date_posted.desc()).all()
 
     return render_template(
         "student_dashboard.html",
+        notices=notices,
         subjects=available_subjects,
         results=results,
         results_published=published,
@@ -439,7 +449,8 @@ def teacher_dashboard():
         if current_session:
             result_filter["session_id"] = current_session.id
         s.filtered_results = AcademicResult.query.filter_by(**result_filter).all()
-    return render_template("teacher_dashboard.html", students=class_students)
+    notices = Notice.query.order_by(Notice.date_posted.desc()).all()
+    return render_template("teacher_dashboard.html", students=class_students, notices=notices)
 
 
 @app.route("/teacher/grade/<int:student_id>", methods=["POST"])
@@ -579,6 +590,15 @@ def admin_dashboard():
             db.session.commit()
             flash("Current session updated!", "success")
 
+        elif action == "post_notice":
+            notice_title = request.form.get("notice_title")
+            notice_body = request.form.get("notice_body")
+            if notice_title and notice_body:
+                from datetime import datetime
+                db.session.add(Notice(title=notice_title, body=notice_body, date_posted=datetime.utcnow()))
+                db.session.commit()
+                flash("Notice posted!", "success")
+
         elif action == "add_fee_structure":
             fs_class_name = request.form.get("fs_class_name")
             fs_amount = request.form.get("fs_amount")
@@ -627,6 +647,7 @@ def admin_dashboard():
     teachers = User.query.filter_by(role="teacher").all()
     timetable_entries = TimetableEntry.query.all()
     fee_structures = FeeStructure.query.all()
+    notices = Notice.query.order_by(Notice.date_posted.desc()).all()
     published = is_results_published()
     return render_template(
         "admin_dashboard.html",
@@ -637,6 +658,7 @@ def admin_dashboard():
         teachers=teachers,
         timetable_entries=timetable_entries,
         fee_structures=fee_structures,
+        notices=notices,
         results_published=published
     )
 @app.route("/admin/reset-portal-data", methods=["POST"])
@@ -669,6 +691,19 @@ def reset_portal_data():
 
     flash("Portal data has been reset. Log in fresh with the default admin account.", "success")
     return redirect(url_for("login"))
+
+
+@app.route("/admin/delete-notice/<int:notice_id>", methods=["POST"])
+@login_required
+def delete_notice(notice_id):
+    if current_user.role != "admin":
+        abort(403)
+    notice = db.session.get(Notice, notice_id)
+    if notice:
+        db.session.delete(notice)
+        db.session.commit()
+        flash("Notice deleted.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/admin/toggle-results", methods=["POST"])

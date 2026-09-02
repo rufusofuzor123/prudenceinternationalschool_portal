@@ -215,6 +215,36 @@
 </div>
 
 <div class="card" style="margin-top:20px;">
+    <h3>Post Notice</h3>
+    <form method="POST">
+        <input type="hidden" name="action" value="post_notice">
+        <div class="form-group"><label>Title</label><input type="text" name="notice_title" class="form-control" required></div>
+        <div class="form-group"><label>Message</label><textarea name="notice_body" class="form-control" rows="3" required></textarea></div>
+        <button type="submit" class="btn btn-primary">Post Notice</button>
+    </form>
+
+    <div class="table-wrapper" style="margin-top:15px;">
+        <table class="data-table">
+            <thead><tr><th>Title</th><th>Message</th><th>Posted</th><th></th></tr></thead>
+            <tbody>
+                {% for n in notices %}
+                <tr>
+                    <td>{{ n.title }}</td>
+                    <td>{{ n.body }}</td>
+                    <td>{{ n.date_posted.strftime('%d %b %Y') }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_notice', notice_id=n.id) }}" onsubmit="return confirm('Delete this notice?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top:20px;">
     <h3>Registered Portal Users</h3>
     <div class="table-wrapper">
 <table class="data-table">
