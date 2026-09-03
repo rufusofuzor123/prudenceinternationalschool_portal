@@ -17,6 +17,7 @@
     <div class="card">
         <h3>Student Profile</h3>
         <img src="{{ url_for('static', filename='uploads/' + current_user.passport_pic) }}" class="passport-img" alt="Passport">
+        <p style="text-align:center; font-weight:bold; margin:5px 0;">{{ current_user.full_name }}</p>
         <form method="POST" enctype="multipart/form-data" style="margin-top: 10px;" class="no-print">
             <input type="file" name="passport" accept="image/*" required>
             <button type="submit" class="btn btn-sm btn-secondary">Upload Passport</button>
