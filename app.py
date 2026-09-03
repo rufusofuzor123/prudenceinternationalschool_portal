@@ -123,6 +123,17 @@ class Notice(db.Model):
     date_posted = db.Column(db.DateTime, nullable=False)
 
 
+class TeacherAssignment(db.Model):
+    __tablename__ = "teacher_assignments"
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    class_name = db.Column(db.String(50), nullable=False)
+
+    teacher = db.relationship("User", backref="teaching_assignments")
+    subject = db.relationship("Subject", backref="teaching_assignments")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -590,6 +601,27 @@ def admin_dashboard():
             db.session.commit()
             flash("Current session updated!", "success")
 
+        elif action == "assign_teacher":
+            ta_teacher_id = request.form.get("ta_teacher_id")
+            ta_subject_id = request.form.get("ta_subject_id")
+            ta_class_name = request.form.get("ta_class_name")
+            if ta_teacher_id and ta_subject_id and ta_class_name:
+                existing = TeacherAssignment.query.filter_by(
+                    teacher_id=int(ta_teacher_id),
+                    subject_id=int(ta_subject_id),
+                    class_name=ta_class_name
+                ).first()
+                if not existing:
+                    db.session.add(TeacherAssignment(
+                        teacher_id=int(ta_teacher_id),
+                        subject_id=int(ta_subject_id),
+                        class_name=ta_class_name
+                    ))
+                    db.session.commit()
+                    flash("Teacher assigned to class/subject!", "success")
+                else:
+                    flash("This assignment already exists.", "danger")
+
         elif action == "post_notice":
             notice_title = request.form.get("notice_title")
             notice_body = request.form.get("notice_body")
@@ -648,6 +680,7 @@ def admin_dashboard():
     timetable_entries = TimetableEntry.query.all()
     fee_structures = FeeStructure.query.all()
     notices = Notice.query.order_by(Notice.date_posted.desc()).all()
+    teacher_assignments = TeacherAssignment.query.all()
     published = is_results_published()
     return render_template(
         "admin_dashboard.html",
@@ -659,6 +692,7 @@ def admin_dashboard():
         timetable_entries=timetable_entries,
         fee_structures=fee_structures,
         notices=notices,
+        teacher_assignments=teacher_assignments,
         results_published=published
     )
 @app.route("/admin/reset-portal-data", methods=["POST"])
@@ -691,6 +725,19 @@ def reset_portal_data():
 
     flash("Portal data has been reset. Log in fresh with the default admin account.", "success")
     return redirect(url_for("login"))
+
+
+@app.route("/admin/delete-assignment/<int:assignment_id>", methods=["POST"])
+@login_required
+def delete_assignment(assignment_id):
+    if current_user.role != "admin":
+        abort(403)
+    a = db.session.get(TeacherAssignment, assignment_id)
+    if a:
+        db.session.delete(a)
+        db.session.commit()
+        flash("Assignment removed.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/admin/delete-notice/<int:notice_id>", methods=["POST"])
