@@ -826,8 +826,6 @@ def delete_notice(notice_id):
     return redirect(url_for("admin_dashboard"))
 
 
-@app.route("/admin/toggle-results", methods=["POST"])
-@login_required
 def send_result_notifications():
     students = User.query.filter_by(role="student").all()
     sent_count = 0
@@ -853,6 +851,8 @@ def send_result_notifications():
     return sent_count
 
 
+@app.route("/admin/toggle-results", methods=["POST"])
+@login_required
 def toggle_results():
     if current_user.role != "admin":
         abort(403)
