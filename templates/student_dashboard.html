@@ -42,6 +42,19 @@
     </div>
 
     <div class="card no-print">
+        <h3>Subjects Registered</h3>
+        {% if results %}
+        <ul>
+            {% for res in results %}
+            <li>{{ res.subject.name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No subjects registered yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card no-print">
         <h3>Register Term Subjects</h3>
         <form method="POST" action="{{ url_for('register_subjects') }}">
             {% for subject in subjects %}
