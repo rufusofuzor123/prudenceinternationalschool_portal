@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Grade Entry — {{ assignment.class_name }} — {{ assignment.subject.name }}</h2>
+
+<div class="card">
+    <form method="POST">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Student</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total</th><th>Grade</th></tr>
+                </thead>
+                <tbody>
+                    {% for student, res in student_results %}
+                    <tr>
+                        <td>{{ student.full_name }}</td>
+                        <td><input type="number" step="0.1" name="ca1_{{ student.id }}" value="{{ res.ca1_score if res else 0 }}" max="20" class="form-control"></td>
+                        <td><input type="number" step="0.1" name="ca2_{{ student.id }}" value="{{ res.ca2_score if res else 0 }}" max="20" class="form-control"></td>
+                        <td><input type="number" step="0.1" name="exam_{{ student.id }}" value="{{ res.exam_score if res else 0 }}" max="60" class="form-control"></td>
+                        <td>{{ res.total_score if res else 0 }}</td>
+                        <td>{{ res.grade if res else 'F' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:15px;">Save Scores</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Teacher Dashboard — Assigned Class: {{ current_user.assigned_class }}</h2>
+<h2>Teacher Dashboard</h2>
 
 <div class="card no-print" style="margin-bottom:20px;">
     <h3>Notice Board</h3>
@@ -13,33 +13,31 @@
     <p>No notices posted yet.</p>
     {% endfor %}
 </div>
-<a href="{{ url_for('mark_attendance') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">Mark Attendance</a> <a href="{{ url_for('view_timetable') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">View Timetable</a>
 
-{% for student in students %}
-<div class="card" style="margin-bottom: 20px;">
-    <h3>Student: {{ student.full_name }} ({{ student.username }})</h3>
-    <form method="POST" action="{{ url_for('enter_grades', student_id=student.id) }}">
-        <div class="table-wrapper">
-<table class="data-table">
-            <thead>
-                <tr><th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total (Saved)</th><th>Grade (Saved)</th></tr>
-            </thead>
+{% if current_user.assigned_class %}
+<a href="{{ url_for('mark_attendance') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">Mark Attendance ({{ current_user.assigned_class }})</a>
+{% endif %}
+<a href="{{ url_for('view_timetable') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">View Timetable</a>
+
+<div class="card" style="margin-top:20px;">
+    <h3>My Teaching Assignments</h3>
+    {% if my_assignments %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Class</th><th>Subject</th><th></th></tr></thead>
             <tbody>
-                {% for res in student.filtered_results %}
+                {% for a in my_assignments %}
                 <tr>
-                    <td>{{ res.subject.name }}</td>
-                    <td><input type="number" step="0.1" name="ca1_{{ res.id }}" value="{{ res.ca1_score }}" max="20" class="form-control"></td>
-                    <td><input type="number" step="0.1" name="ca2_{{ res.id }}" value="{{ res.ca2_score }}" max="20" class="form-control"></td>
-                    <td><input type="number" step="0.1" name="exam_{{ res.id }}" value="{{ res.exam_score }}" max="60" class="form-control"></td>
-                    <td>{{ res.total_score }}</td>
-                    <td>{{ res.grade }}</td>
+                    <td>{{ a.class_name }}</td>
+                    <td>{{ a.subject.name }}</td>
+                    <td><a href="{{ url_for('grade_class', assignment_id=a.id) }}" class="btn btn-primary btn-sm">Enter Scores</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    {% else %}
+    <p>No teaching assignments yet. Contact the administrator.</p>
+    {% endif %}
 </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:10px;">Save Marks for {{ student.full_name }}</button>
-    </form>
-</div>
-{% endfor %}
 {% endblock %}

@@ -461,7 +461,8 @@ def teacher_dashboard():
             result_filter["session_id"] = current_session.id
         s.filtered_results = AcademicResult.query.filter_by(**result_filter).all()
     notices = Notice.query.order_by(Notice.date_posted.desc()).all()
-    return render_template("teacher_dashboard.html", students=class_students, notices=notices)
+    my_assignments = TeacherAssignment.query.filter_by(teacher_id=current_user.id).all()
+    return render_template("teacher_dashboard.html", students=class_students, notices=notices, my_assignments=my_assignments)
 
 
 @app.route("/teacher/grade/<int:student_id>", methods=["POST"])
@@ -508,6 +509,8 @@ def view_timetable():
 def mark_attendance():
     if current_user.role != "teacher":
         abort(403)
+    if not current_user.assigned_class:
+        abort(403)
 
     from datetime import date as date_cls
     current_session = get_current_session()
@@ -537,6 +540,58 @@ def mark_attendance():
 
     today = date_cls.today().isoformat()
     return render_template("mark_attendance.html", students=class_students, today=today)
+
+
+@app.route("/teacher/grade-class/<int:assignment_id>", methods=["GET", "POST"])
+@login_required
+def grade_class(assignment_id):
+    if current_user.role != "teacher":
+        abort(403)
+
+    assignment = db.session.get(TeacherAssignment, assignment_id)
+    if not assignment or assignment.teacher_id != current_user.id:
+        abort(403)
+
+    current_session = get_current_session()
+    class_students = User.query.filter_by(role="student", assigned_class=assignment.class_name).all()
+
+    if request.method == "POST":
+        for student in class_students:
+            result_filter = {
+                "student_id": student.id,
+                "subject_id": assignment.subject_id,
+            }
+            if current_session:
+                result_filter["session_id"] = current_session.id
+            res = AcademicResult.query.filter_by(**result_filter).first()
+            ca1 = request.form.get(f"ca1_{student.id}")
+            ca2 = request.form.get(f"ca2_{student.id}")
+            exam = request.form.get(f"exam_{student.id}")
+            if ca1 is None:
+                continue
+            if not res:
+                res = AcademicResult(
+                    student_id=student.id,
+                    subject_id=assignment.subject_id,
+                    session_id=current_session.id if current_session else None
+                )
+                db.session.add(res)
+            res.ca1_score = float(ca1 or 0)
+            res.ca2_score = float(ca2 or 0)
+            res.exam_score = float(exam or 0)
+        db.session.commit()
+        flash("Scores saved!", "success")
+        return redirect(url_for("grade_class", assignment_id=assignment_id))
+
+    student_results = []
+    for student in class_students:
+        result_filter = {"student_id": student.id, "subject_id": assignment.subject_id}
+        if current_session:
+            result_filter["session_id"] = current_session.id
+        res = AcademicResult.query.filter_by(**result_filter).first()
+        student_results.append((student, res))
+
+    return render_template("grade_class.html", assignment=assignment, student_results=student_results)
 
 
 @app.route("/admin/dashboard", methods=["GET", "POST"])
