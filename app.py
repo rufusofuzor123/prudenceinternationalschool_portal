@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "prudence-secret-key-998877")
@@ -17,6 +18,14 @@ if db_url.startswith("postgres://"):
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 587
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_USERNAME")
+mail = Mail(app)
 
 UPLOAD_FOLDER = os.path.join("static", "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
@@ -52,6 +61,9 @@ class User(UserMixin, db.Model):
     assigned_class = db.Column(db.String(50), nullable=True)
     passport_pic = db.Column(db.String(200), default="default_passport.jpg")
     fee_paid = db.Column(db.Boolean, default=False)
+    parent_name = db.Column(db.String(120), nullable=True)
+    parent_email = db.Column(db.String(120), nullable=True)
+    parent_phone = db.Column(db.String(20), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -610,6 +622,9 @@ def admin_dashboard():
             email = request.form.get("email")
             role = request.form.get("role")
             assigned_class = request.form.get("assigned_class")
+            parent_name = request.form.get("parent_name")
+            parent_email = request.form.get("parent_email")
+            parent_phone = request.form.get("parent_phone")
 
             if not User.query.filter_by(username=username).first():
                 new_user = User(
@@ -617,7 +632,10 @@ def admin_dashboard():
                     full_name=full_name,
                     email=email,
                     role=role,
-                    assigned_class=assigned_class
+                    assigned_class=assigned_class,
+                    parent_name=parent_name,
+                    parent_email=parent_email,
+                    parent_phone=parent_phone
                 )
                 new_user.set_password(password)
                 db.session.add(new_user)
@@ -810,6 +828,31 @@ def delete_notice(notice_id):
 
 @app.route("/admin/toggle-results", methods=["POST"])
 @login_required
+def send_result_notifications():
+    students = User.query.filter_by(role="student").all()
+    sent_count = 0
+    for student in students:
+        if not student.parent_email:
+            continue
+        try:
+            msg = Message(
+                subject="Term Result Published - Prudence International School",
+                recipients=[student.parent_email],
+                body=(
+                    f"Dear {student.parent_name or 'Parent/Guardian'},\n\n"
+                    f"The term result for {student.full_name} has been published and is now "
+                    f"available on the school portal.\n\n"
+                    f"Please log in to the portal to view or print the result sheet.\n\n"
+                    f"Regards,\nPrudence International School"
+                )
+            )
+            mail.send(msg)
+            sent_count += 1
+        except Exception:
+            pass
+    return sent_count
+
+
 def toggle_results():
     if current_user.role != "admin":
         abort(403)
@@ -822,8 +865,11 @@ def toggle_results():
     setting.value = "false" if setting.value == "true" else "true"
     db.session.commit()
 
-    status_msg = "published and live for students!" if setting.value == "true" else "hidden/unpublished."
-    flash(f"Term results are now {status_msg}", "info")
+    if setting.value == "true":
+        sent = send_result_notifications()
+        flash(f"Term results are now published and live for students! Notified {sent} parent(s) by email.", "info")
+    else:
+        flash("Term results are now hidden/unpublished.", "info")
     return redirect(url_for("admin_dashboard"))
 
 
@@ -835,6 +881,17 @@ with app.app_context():
     existing_columns = [col["name"] for col in inspector.get_columns("academic_results")]
     if "session_id" not in existing_columns:
         db.session.execute(text("ALTER TABLE academic_results ADD COLUMN session_id INTEGER REFERENCES sessions(id)"))
+        db.session.commit()
+
+    user_columns = [col["name"] for col in inspector.get_columns("users")]
+    if "parent_name" not in user_columns:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN parent_name VARCHAR(120)"))
+        db.session.commit()
+    if "parent_email" not in user_columns:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN parent_email VARCHAR(120)"))
+        db.session.commit()
+    if "parent_phone" not in user_columns:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN parent_phone VARCHAR(20)"))
         db.session.commit()
 
     if not User.query.filter_by(username="admin").first():
