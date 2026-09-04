@@ -200,6 +200,47 @@ class Submission(db.Model):
     student = db.relationship("User", backref="submissions")
 
 
+class Quiz(db.Model):
+    __tablename__ = "quizzes"
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    class_name = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(150), nullable=False)
+    duration_minutes = db.Column(db.Integer, nullable=False, default=15)
+    date_created = db.Column(db.DateTime, nullable=False)
+
+    teacher = db.relationship("User", backref="quizzes_created")
+    subject = db.relationship("Subject", backref="quizzes")
+
+
+class Question(db.Model):
+    __tablename__ = "questions"
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey("quizzes.id"), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    option_a = db.Column(db.String(300), nullable=False)
+    option_b = db.Column(db.String(300), nullable=False)
+    option_c = db.Column(db.String(300), nullable=False)
+    option_d = db.Column(db.String(300), nullable=False)
+    correct_option = db.Column(db.String(1), nullable=False)
+
+    quiz = db.relationship("Quiz", backref="questions")
+
+
+class QuizAttempt(db.Model):
+    __tablename__ = "quiz_attempts"
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey("quizzes.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    score = db.Column(db.Float, nullable=False, default=0)
+    total_questions = db.Column(db.Integer, nullable=False, default=0)
+    date_taken = db.Column(db.DateTime, nullable=False)
+
+    quiz = db.relationship("Quiz", backref="attempts")
+    student = db.relationship("User", backref="quiz_attempts")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -694,6 +735,120 @@ def enter_grades(student_id: int):
     db.session.commit()
     flash("Student grades updated successfully!", "success")
     return redirect(url_for("teacher_dashboard"))
+
+
+@app.route("/student/quizzes")
+@login_required
+def student_quizzes():
+    if current_user.role != "student":
+        abort(403)
+    quizzes = Quiz.query.filter_by(class_name=current_user.assigned_class).all()
+    my_attempts = {a.quiz_id: a for a in QuizAttempt.query.filter_by(student_id=current_user.id).all()}
+    return render_template("student_quizzes.html", quizzes=quizzes, my_attempts=my_attempts)
+
+
+@app.route("/student/quiz/<int:quiz_id>/take", methods=["GET", "POST"])
+@login_required
+def take_quiz(quiz_id):
+    if current_user.role != "student":
+        abort(403)
+    quiz = db.session.get(Quiz, quiz_id)
+    if not quiz or quiz.class_name != current_user.assigned_class:
+        abort(403)
+
+    existing = QuizAttempt.query.filter_by(quiz_id=quiz_id, student_id=current_user.id).first()
+    if existing:
+        flash("You have already taken this quiz.", "danger")
+        return redirect(url_for("student_quizzes"))
+
+    questions = Question.query.filter_by(quiz_id=quiz_id).all()
+
+    if request.method == "POST":
+        correct_count = 0
+        for q in questions:
+            selected = request.form.get(f"q_{q.id}")
+            if selected == q.correct_option:
+                correct_count += 1
+        score = round((correct_count / len(questions)) * 100, 1) if questions else 0
+        from datetime import datetime as dt
+        db.session.add(QuizAttempt(
+            quiz_id=quiz_id,
+            student_id=current_user.id,
+            score=score,
+            total_questions=len(questions),
+            date_taken=dt.utcnow()
+        ))
+        db.session.commit()
+        flash(f"Quiz submitted! Your score: {score}%", "success")
+        return redirect(url_for("student_quizzes"))
+
+    return render_template("take_quiz.html", quiz=quiz, questions=questions)
+
+
+@app.route("/teacher/quizzes", methods=["GET", "POST"])
+@login_required
+def teacher_quizzes():
+    if current_user.role != "teacher":
+        abort(403)
+
+    my_teaching = TeacherAssignment.query.filter_by(teacher_id=current_user.id).all()
+
+    if request.method == "POST":
+        subject_id = request.form.get("quiz_subject_id")
+        class_name = request.form.get("quiz_class_name")
+        title = request.form.get("quiz_title")
+        duration = request.form.get("quiz_duration", 15)
+        if subject_id and class_name and title:
+            from datetime import datetime as dt
+            db.session.add(Quiz(
+                teacher_id=current_user.id,
+                subject_id=int(subject_id),
+                class_name=class_name,
+                title=title,
+                duration_minutes=int(duration),
+                date_created=dt.utcnow()
+            ))
+            db.session.commit()
+            flash("Quiz created! Now add questions to it.", "success")
+        return redirect(url_for("teacher_quizzes"))
+
+    my_quizzes = Quiz.query.filter_by(teacher_id=current_user.id).order_by(Quiz.date_created.desc()).all()
+    return render_template("teacher_quizzes.html", my_teaching=my_teaching, my_quizzes=my_quizzes)
+
+
+@app.route("/teacher/quiz/<int:quiz_id>", methods=["GET", "POST"])
+@login_required
+def manage_quiz(quiz_id):
+    if current_user.role != "teacher":
+        abort(403)
+    quiz = db.session.get(Quiz, quiz_id)
+    if not quiz or quiz.teacher_id != current_user.id:
+        abort(403)
+
+    if request.method == "POST":
+        q_text = request.form.get("question_text")
+        opt_a = request.form.get("option_a")
+        opt_b = request.form.get("option_b")
+        opt_c = request.form.get("option_c")
+        opt_d = request.form.get("option_d")
+        correct = request.form.get("correct_option")
+        if q_text and opt_a and opt_b and opt_c and opt_d and correct:
+            db.session.add(Question(
+                quiz_id=quiz_id,
+                question_text=q_text,
+                option_a=opt_a,
+                option_b=opt_b,
+                option_c=opt_c,
+                option_d=opt_d,
+                correct_option=correct
+            ))
+            db.session.commit()
+            flash("Question added!", "success")
+        return redirect(url_for("manage_quiz", quiz_id=quiz_id))
+
+    questions = Question.query.filter_by(quiz_id=quiz_id).all()
+    attempts = QuizAttempt.query.filter_by(quiz_id=quiz_id).all()
+    return render_template("manage_quiz.html", quiz=quiz, questions=questions, attempts=attempts)
 
 
 @app.route("/student/assignments")
@@ -1405,6 +1560,13 @@ with app.app_context():
         Assignment.__table__.create(db.engine)
     if "submissions" not in inspector.get_table_names():
         Submission.__table__.create(db.engine)
+
+    if "quizzes" not in inspector.get_table_names():
+        Quiz.__table__.create(db.engine)
+    if "questions" not in inspector.get_table_names():
+        Question.__table__.create(db.engine)
+    if "quiz_attempts" not in inspector.get_table_names():
+        QuizAttempt.__table__.create(db.engine)
 
     if not User.query.filter_by(username="admin").first():
         default_admin = User(

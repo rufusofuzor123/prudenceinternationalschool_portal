@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Quizzes</h2>
+
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>Create New Quiz</h3>
+    <form method="POST">
+        <div class="form-group">
+            <label>Class / Subject</label>
+            <select name="quiz_class_name" id="qClassSel" class="form-control" onchange="syncQSubject()" required>
+                {% for t in my_teaching %}
+                <option value="{{ t.class_name }}" data-subject="{{ t.subject_id }}">{{ t.class_name }} - {{ t.subject.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="quiz_subject_id" id="qSubjectField">
+        </div>
+        <div class="form-group"><label>Title</label><input type="text" name="quiz_title" class="form-control" required></div>
+        <div class="form-group"><label>Duration (minutes)</label><input type="number" name="quiz_duration" value="15" class="form-control"></div>
+        <button type="submit" class="btn btn-primary">Create Quiz</button>
+    </form>
+</div>
+
+<script>
+function syncQSubject() {
+    var sel = document.getElementById('qClassSel');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('qSubjectField').value = opt.getAttribute('data-subject');
+}
+window.onload = syncQSubject;
+</script>
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead><tr><th>Title</th><th>Class</th><th>Subject</th><th>Duration</th><th></th></tr></thead>
+        <tbody>
+            {% for q in my_quizzes %}
+            <tr>
+                <td>{{ q.title }}</td>
+                <td>{{ q.class_name }}</td>
+                <td>{{ q.subject.name }}</td>
+                <td>{{ q.duration_minutes }} min</td>
+                <td><a href="{{ url_for('manage_quiz', quiz_id=q.id) }}" class="btn btn-primary btn-sm">Manage</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5">No quizzes created yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

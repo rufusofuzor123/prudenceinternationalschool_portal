@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Quizzes</h2>
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead><tr><th>Title</th><th>Subject</th><th>Duration</th><th>Status</th></tr></thead>
+        <tbody>
+            {% for q in quizzes %}
+            <tr>
+                <td>{{ q.title }}</td>
+                <td>{{ q.subject.name }}</td>
+                <td>{{ q.duration_minutes }} min</td>
+                <td>
+                    {% set attempt = my_attempts.get(q.id) %}
+                    {% if attempt %}
+                    Completed — Score: {{ attempt.score }}%
+                    {% else %}
+                    <a href="{{ url_for('take_quiz', quiz_id=q.id) }}" class="btn btn-primary btn-sm">Take Quiz</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4">No quizzes available.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
