@@ -203,6 +203,11 @@ def is_results_published() -> bool:
     return bool(setting and setting.value == "true")
 
 
+def get_current_term() -> str:
+    setting = SystemSetting.query.filter_by(key="current_term").first()
+    return setting.value if setting else "First Term"
+
+
 def redirect_role_dashboard(role: str):
     if role == "admin":
         return redirect(url_for("admin_dashboard"))
@@ -337,23 +342,25 @@ def get_current_session():
     return Session.query.filter_by(is_current=True).first()
 
 
-def get_subject_positions(student):
+def get_subject_positions(student, session_id=None):
     positions = {}
-    current_session = get_current_session()
+    if session_id is None:
+        current_session = get_current_session()
+        session_id = current_session.id if current_session else None
     classmates_ids = [
         s.id for s in User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
     ]
     result_filter = {"student_id": student.id}
-    if current_session:
-        result_filter["session_id"] = current_session.id
+    if session_id:
+        result_filter["session_id"] = session_id
     subject_ids = {r.subject_id for r in AcademicResult.query.filter_by(**result_filter).all()}
     for subj_id in subject_ids:
         conditions = [
             AcademicResult.subject_id == subj_id,
             AcademicResult.student_id.in_(classmates_ids)
         ]
-        if current_session:
-            conditions.append(AcademicResult.session_id == current_session.id)
+        if session_id:
+            conditions.append(AcademicResult.session_id == session_id)
         subj_results = AcademicResult.query.filter(*conditions).all()
         ranked = sorted(subj_results, key=lambda r: r.total_score, reverse=True)
         for idx, r in enumerate(ranked, start=1):
@@ -366,14 +373,16 @@ def get_subject_positions(student):
     return positions
 
 
-def get_class_position(student):
-    current_session = get_current_session()
+def get_class_position(student, session_id=None):
+    if session_id is None:
+        current_session = get_current_session()
+        session_id = current_session.id if current_session else None
     classmates = User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
     averages = []
     for s in classmates:
         s_filter = {"student_id": s.id}
-        if current_session:
-            s_filter["session_id"] = current_session.id
+        if session_id:
+            s_filter["session_id"] = session_id
         s_results = AcademicResult.query.filter_by(**s_filter).all()
         avg = round(sum(r.total_score for r in s_results) / len(s_results), 2) if s_results else 0
         averages.append((s.id, avg))
@@ -441,6 +450,41 @@ def student_dashboard():
     )
 
 
+@app.route("/student/results-history")
+@login_required
+def results_history():
+    if current_user.role != "student":
+        abort(403)
+
+    all_sessions = Session.query.all()
+    selected_session_id = request.args.get("session_id", type=int)
+    selected_term = request.args.get("term", "")
+
+    results = []
+    subject_positions = {}
+    class_pos, class_total, class_avg = None, 0, 0
+
+    if selected_session_id:
+        result_filter = {"student_id": current_user.id, "session_id": selected_session_id}
+        if selected_term:
+            result_filter["term"] = selected_term
+        results = AcademicResult.query.filter_by(**result_filter).all()
+        subject_positions = get_subject_positions(current_user, session_id=selected_session_id)
+        class_pos, class_total, class_avg = get_class_position(current_user, session_id=selected_session_id)
+
+    return render_template(
+        "results_history.html",
+        all_sessions=all_sessions,
+        selected_session_id=selected_session_id,
+        selected_term=selected_term,
+        results=results,
+        subject_positions=subject_positions,
+        class_position=class_pos,
+        class_total=class_total,
+        class_average=class_avg
+    )
+
+
 @app.route("/student/register-subjects", methods=["POST"])
 @login_required
 def register_subjects():
@@ -453,11 +497,13 @@ def register_subjects():
     if current_session:
         delete_filter["session_id"] = current_session.id
     AcademicResult.query.filter_by(**delete_filter).delete()
+    current_term = get_current_term()
     for sub_id in selected_subject_ids:
         res = AcademicResult(
             student_id=current_user.id,
             subject_id=int(sub_id),
-            session_id=current_session.id if current_session else None
+            session_id=current_session.id if current_session else None,
+            term=current_term
         )
         db.session.add(res)
 
@@ -694,7 +740,8 @@ def grade_class(assignment_id):
                 res = AcademicResult(
                     student_id=student.id,
                     subject_id=assignment.subject_id,
-                    session_id=current_session.id if current_session else None
+                    session_id=current_session.id if current_session else None,
+                    term=get_current_term()
                 )
                 db.session.add(res)
             res.ca1_score = float(ca1 or 0)
@@ -854,6 +901,18 @@ def admin_dashboard():
                 db.session.commit()
                 flash("Session added successfully!", "success")
 
+        elif action == "set_current_term":
+            new_term = request.form.get("current_term")
+            if new_term:
+                setting = SystemSetting.query.filter_by(key="current_term").first()
+                if not setting:
+                    setting = SystemSetting(key="current_term", value=new_term)
+                    db.session.add(setting)
+                else:
+                    setting.value = new_term
+                db.session.commit()
+                flash(f"Current term set to {new_term}!", "success")
+
         elif action == "set_current_session":
             session_id = request.form.get("session_id")
             Session.query.update({Session.is_current: False})
@@ -944,6 +1003,7 @@ def admin_dashboard():
     notices = Notice.query.order_by(Notice.date_posted.desc()).all()
     teacher_assignments = TeacherAssignment.query.all()
     published = is_results_published()
+    current_term = get_current_term()
     return render_template(
         "admin_dashboard.html",
         users=users,
@@ -955,7 +1015,8 @@ def admin_dashboard():
         fee_structures=fee_structures,
         notices=notices,
         teacher_assignments=teacher_assignments,
-        results_published=published
+        results_published=published,
+        current_term=current_term
     )
 @app.route("/admin/reset-portal-data", methods=["POST"])
 @login_required

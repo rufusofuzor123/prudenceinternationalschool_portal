@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Past Results Search</h2>
+
+<div class="card no-print">
+    <form method="GET">
+        <div class="form-group">
+            <label>Session</label>
+            <select name="session_id" class="form-control" required>
+                <option value="">-- Select session --</option>
+                {% for s in all_sessions %}
+                <option value="{{ s.id }}" {% if s.id == selected_session_id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Term (optional)</label>
+            <select name="term" class="form-control">
+                <option value="">-- All terms --</option>
+                <option value="First Term" {% if selected_term == 'First Term' %}selected{% endif %}>First Term</option>
+                <option value="Second Term" {% if selected_term == 'Second Term' %}selected{% endif %}>Second Term</option>
+                <option value="Third Term" {% if selected_term == 'Third Term' %}selected{% endif %}>Third Term</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</div>
+
+{% if selected_session_id %}
+<div class="card" style="margin-top:20px;">
+    <h3>Results</h3>
+    {% if results %}
+    <button onclick="window.print()" class="btn btn-secondary no-print" style="margin-bottom:15px;">Print</button>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr><th>Subject</th><th>CA1</th><th>CA2</th><th>Exam</th><th>Total</th><th>Grade</th><th>Position</th><th>Average</th></tr>
+            </thead>
+            <tbody>
+                {% for res in results %}
+                <tr>
+                    <td>{{ res.subject.name }}</td>
+                    <td>{{ res.ca1_score }}</td>
+                    <td>{{ res.ca2_score }}</td>
+                    <td>{{ res.exam_score }}</td>
+                    <td><strong>{{ res.total_score }}</strong></td>
+                    <td>{{ res.grade }}</td>
+                    <td>{% if subject_positions.get(res.subject_id) %}{{ subject_positions[res.subject_id][0] }} of {{ subject_positions[res.subject_id][1] }}{% else %}N/A{% endif %}</td>
+                    <td>{% if subject_positions.get(res.subject_id) %}{{ subject_positions[res.subject_id][2] }}{% else %}N/A{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p style="margin-top:15px;">
+        <strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}<br>
+        <strong>Overall Average:</strong> {{ class_average }}
+    </p>
+    {% else %}
+    <p>No results found for this selection.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

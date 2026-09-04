@@ -110,6 +110,18 @@
             </div>
             <button type="submit" class="btn btn-primary">Set as Current</button>
         </form>
+        <form method="POST" style="margin-top:15px;">
+            <input type="hidden" name="action" value="set_current_term">
+            <div class="form-group">
+                <label>Set Current Term (currently: {{ current_term }})</label>
+                <select name="current_term" class="form-control">
+                    <option>First Term</option>
+                    <option>Second Term</option>
+                    <option>Third Term</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Set Term</button>
+        </form>
     </div>
 </div>
 
