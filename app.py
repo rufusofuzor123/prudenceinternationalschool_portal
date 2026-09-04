@@ -922,6 +922,20 @@ def admin_dashboard():
             db.session.commit()
             flash("Current session updated!", "success")
 
+        elif action == "promote_students":
+            from_class = request.form.get("promote_from")
+            to_class = request.form.get("promote_to")
+            if from_class and to_class and from_class != to_class:
+                students_to_promote = User.query.filter_by(role="student", assigned_class=from_class).all()
+                count = len(students_to_promote)
+                for s in students_to_promote:
+                    s.assigned_class = to_class
+                    s.fee_paid = False
+                db.session.commit()
+                flash(f"Promoted {count} student(s) from {from_class} to {to_class}. Fee status reset for the new class.", "success")
+            else:
+                flash("Please select two different classes.", "danger")
+
         elif action == "assign_teacher":
             ta_teacher_id = request.form.get("ta_teacher_id")
             ta_subject_id = request.form.get("ta_subject_id")

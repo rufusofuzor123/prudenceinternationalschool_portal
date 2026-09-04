@@ -294,6 +294,31 @@
     </div>
 </div>
 
+<div class="card" style="margin-top:20px; border:2px solid #ffc107;">
+    <h3>Promote Students (End of Session)</h3>
+    <p style="font-size:13px; color:#666;">Moves ALL students from one class to another and resets their fee status for the new term.</p>
+    <form method="POST" onsubmit="return confirm('This will move every student in the selected class. Are you sure?');">
+        <input type="hidden" name="action" value="promote_students">
+        <div class="form-group">
+            <label>From Class</label>
+            <select name="promote_from" class="form-control">
+                {% for c in classes %}
+                <option value="{{ c.name }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>To Class</label>
+            <select name="promote_to" class="form-control">
+                {% for c in classes %}
+                <option value="{{ c.name }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-danger">Promote Students</button>
+    </form>
+</div>
+
 <div class="card" style="margin-top:20px;">
     <h3>Post Notice</h3>
     <form method="POST">
