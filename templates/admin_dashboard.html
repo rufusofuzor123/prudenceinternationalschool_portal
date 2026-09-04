@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Admin Control Panel</h2>
+
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>Analytics Overview</h3>
+    <div class="dashboard-grid">
+        <div><canvas id="feeChart"></canvas></div>
+        <div><canvas id="scoreChart"></canvas></div>
+    </div>
+    <div style="margin-top:20px;"><canvas id="attendanceChart"></canvas></div>
+</div>
 <a href="{{ url_for('staff_records') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">View Staff Records</a> <a href="{{ url_for('view_calendar') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">School Calendar</a>
 
 <div class="card no-print" style="margin-bottom:20px;">
@@ -374,4 +383,37 @@
     </table>
 </div>
 </div>
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+    const chartData = {{ chart_data|safe }};
+
+    new Chart(document.getElementById('feeChart'), {
+        type: 'pie',
+        data: {
+            labels: chartData.fee_labels,
+            datasets: [{ data: chartData.fee_values, backgroundColor: ['#28a745', '#dc3545'] }]
+        },
+        options: { plugins: { title: { display: true, text: 'Fee Payment Status' } } }
+    });
+
+    new Chart(document.getElementById('scoreChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.class_labels,
+            datasets: [{ label: 'Average Score', data: chartData.avg_scores, backgroundColor: '#003366' }]
+        },
+        options: { plugins: { title: { display: true, text: 'Average Score by Class' } } }
+    });
+
+    new Chart(document.getElementById('attendanceChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.class_labels,
+            datasets: [{ label: 'Attendance Rate (%)', data: chartData.attendance_rates, backgroundColor: '#28a745' }]
+        },
+        options: { plugins: { title: { display: true, text: 'Attendance Rate by Class' } } }
+    });
+</script>
+{% endblock %}
 {% endblock %}

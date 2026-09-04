@@ -1057,6 +1057,43 @@ def admin_dashboard():
     teacher_assignments = TeacherAssignment.query.all()
     published = is_results_published()
     current_term = get_current_term()
+
+    import json
+    all_students = User.query.filter_by(role="student").all()
+    paid_count = sum(1 for s in all_students if s.fee_paid)
+    unpaid_count = len(all_students) - paid_count
+
+    class_names = [c.name for c in classes]
+    avg_scores = []
+    attendance_rates = []
+    current_session = get_current_session()
+    for cname in class_names:
+        class_students = [s for s in all_students if s.assigned_class == cname]
+        student_ids = [s.id for s in class_students]
+
+        result_filter = [AcademicResult.student_id.in_(student_ids)] if student_ids else [AcademicResult.student_id == -1]
+        if current_session:
+            result_filter.append(AcademicResult.session_id == current_session.id)
+        class_results = AcademicResult.query.filter(*result_filter).all()
+        avg = round(sum(r.total_score for r in class_results) / len(class_results), 1) if class_results else 0
+        avg_scores.append(avg)
+
+        att_filter = [Attendance.student_id.in_(student_ids)] if student_ids else [Attendance.student_id == -1]
+        if current_session:
+            att_filter.append(Attendance.session_id == current_session.id)
+        class_attendance = Attendance.query.filter(*att_filter).all()
+        present = sum(1 for a in class_attendance if a.status == "Present")
+        rate = round((present / len(class_attendance)) * 100, 1) if class_attendance else 0
+        attendance_rates.append(rate)
+
+    chart_data = json.dumps({
+        "fee_labels": ["Paid", "Unpaid"],
+        "fee_values": [paid_count, unpaid_count],
+        "class_labels": class_names,
+        "avg_scores": avg_scores,
+        "attendance_rates": attendance_rates
+    })
+
     return render_template(
         "admin_dashboard.html",
         users=users,
@@ -1069,7 +1106,8 @@ def admin_dashboard():
         notices=notices,
         teacher_assignments=teacher_assignments,
         results_published=published,
-        current_term=current_term
+        current_term=current_term,
+        chart_data=chart_data
     )
 @app.route("/admin/staff-records")
 @login_required
