@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Assignments</h2>
+
+{% for a in assignments %}
+<div class="card" style="margin-bottom:15px;">
+    <h4>{{ a.title }} — {{ a.subject.name }}</h4>
+    <p><strong>Due:</strong> {{ a.due_date.strftime('%d %b %Y') }}</p>
+    <p>{{ a.description or '' }}</p>
+
+    {% set sub = my_submissions.get(a.id) %}
+    <form method="POST" action="{{ url_for('submit_assignment', assignment_id=a.id) }}">
+        <div class="form-group">
+            <label>Your Answer</label>
+            <textarea name="answer_text" class="form-control" rows="4" required>{{ sub.answer_text if sub else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">{{ 'Update Submission' if sub else 'Submit' }}</button>
+    </form>
+
+    {% if sub and sub.grade %}
+    <p style="margin-top:10px;"><strong>Grade:</strong> {{ sub.grade }} &nbsp; <strong>Feedback:</strong> {{ sub.feedback or 'N/A' }}</p>
+    {% endif %}
+</div>
+{% else %}
+<p>No assignments posted yet.</p>
+{% endfor %}
+{% endblock %}

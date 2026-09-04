@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Assignments</h2>
+
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>Post New Assignment</h3>
+    <form method="POST">
+        <div class="form-group">
+            <label>Class / Subject</label>
+            <select name="assign_class_name" id="classSel" class="form-control" onchange="syncSubject()" required>
+                {% for t in my_teaching %}
+                <option value="{{ t.class_name }}" data-subject="{{ t.subject_id }}">{{ t.class_name }} - {{ t.subject.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="assign_subject_id" id="subjectField">
+        </div>
+        <div class="form-group"><label>Title</label><input type="text" name="assign_title" class="form-control" required></div>
+        <div class="form-group"><label>Description</label><textarea name="assign_description" class="form-control" rows="3"></textarea></div>
+        <div class="form-group"><label>Due Date</label><input type="date" name="assign_due_date" class="form-control" required></div>
+        <button type="submit" class="btn btn-primary">Post Assignment</button>
+    </form>
+</div>
+
+<script>
+function syncSubject() {
+    var sel = document.getElementById('classSel');
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('subjectField').value = opt.getAttribute('data-subject');
+}
+window.onload = syncSubject;
+</script>
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead><tr><th>Title</th><th>Class</th><th>Subject</th><th>Due Date</th><th></th></tr></thead>
+        <tbody>
+            {% for a in my_assignments %}
+            <tr>
+                <td>{{ a.title }}</td>
+                <td>{{ a.class_name }}</td>
+                <td>{{ a.subject.name }}</td>
+                <td>{{ a.due_date.strftime('%d %b %Y') }}</td>
+                <td><a href="{{ url_for('view_submissions', assignment_id=a.id) }}" class="btn btn-primary btn-sm">View Submissions</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5">No assignments posted yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

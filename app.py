@@ -171,6 +171,35 @@ class Event(db.Model):
     event_type = db.Column(db.String(30), nullable=False, default="General")
 
 
+class Assignment(db.Model):
+    __tablename__ = "assignments"
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    class_name = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    due_date = db.Column(db.Date, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False)
+
+    teacher = db.relationship("User", backref="assignments_created")
+    subject = db.relationship("Subject", backref="assignments")
+
+
+class Submission(db.Model):
+    __tablename__ = "submissions"
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey("assignments.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    answer_text = db.Column(db.Text, nullable=False)
+    date_submitted = db.Column(db.DateTime, nullable=False)
+    grade = db.Column(db.String(20), nullable=True)
+    feedback = db.Column(db.Text, nullable=True)
+
+    assignment = db.relationship("Assignment", backref="submissions")
+    student = db.relationship("User", backref="submissions")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -665,6 +694,104 @@ def enter_grades(student_id: int):
     db.session.commit()
     flash("Student grades updated successfully!", "success")
     return redirect(url_for("teacher_dashboard"))
+
+
+@app.route("/student/assignments")
+@login_required
+def student_assignments():
+    if current_user.role != "student":
+        abort(403)
+    assignments = Assignment.query.filter_by(class_name=current_user.assigned_class).order_by(Assignment.due_date.asc()).all()
+    my_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=current_user.id).all()}
+    return render_template("student_assignments.html", assignments=assignments, my_submissions=my_submissions)
+
+
+@app.route("/student/assignment/<int:assignment_id>/submit", methods=["POST"])
+@login_required
+def submit_assignment(assignment_id):
+    if current_user.role != "student":
+        abort(403)
+    assignment = db.session.get(Assignment, assignment_id)
+    if not assignment or assignment.class_name != current_user.assigned_class:
+        abort(403)
+
+    existing = Submission.query.filter_by(assignment_id=assignment_id, student_id=current_user.id).first()
+    answer_text = request.form.get("answer_text")
+    from datetime import datetime as dt
+    if existing:
+        existing.answer_text = answer_text
+        existing.date_submitted = dt.utcnow()
+    else:
+        db.session.add(Submission(
+            assignment_id=assignment_id,
+            student_id=current_user.id,
+            answer_text=answer_text,
+            date_submitted=dt.utcnow()
+        ))
+    db.session.commit()
+    flash("Assignment submitted!", "success")
+    return redirect(url_for("student_assignments"))
+
+
+@app.route("/teacher/assignments", methods=["GET", "POST"])
+@login_required
+def teacher_assignments():
+    if current_user.role != "teacher":
+        abort(403)
+
+    my_teaching = TeacherAssignment.query.filter_by(teacher_id=current_user.id).all()
+
+    if request.method == "POST":
+        subject_id = request.form.get("assign_subject_id")
+        class_name = request.form.get("assign_class_name")
+        title = request.form.get("assign_title")
+        description = request.form.get("assign_description")
+        due_date_str = request.form.get("assign_due_date")
+        if subject_id and class_name and title and due_date_str:
+            from datetime import datetime as dt
+            due_date = dt.strptime(due_date_str, "%Y-%m-%d").date()
+            db.session.add(Assignment(
+                teacher_id=current_user.id,
+                subject_id=int(subject_id),
+                class_name=class_name,
+                title=title,
+                description=description,
+                due_date=due_date,
+                date_posted=dt.utcnow()
+            ))
+            db.session.commit()
+            flash("Assignment posted!", "success")
+        return redirect(url_for("teacher_assignments"))
+
+    my_assignments = Assignment.query.filter_by(teacher_id=current_user.id).order_by(Assignment.due_date.desc()).all()
+    return render_template("teacher_assignments.html", my_teaching=my_teaching, my_assignments=my_assignments)
+
+
+@app.route("/teacher/assignment/<int:assignment_id>/submissions")
+@login_required
+def view_submissions(assignment_id):
+    if current_user.role != "teacher":
+        abort(403)
+    assignment = db.session.get(Assignment, assignment_id)
+    if not assignment or assignment.teacher_id != current_user.id:
+        abort(403)
+    submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
+    return render_template("view_submissions.html", assignment=assignment, submissions=submissions)
+
+
+@app.route("/teacher/submission/<int:submission_id>/grade", methods=["POST"])
+@login_required
+def grade_submission(submission_id):
+    if current_user.role != "teacher":
+        abort(403)
+    submission = db.session.get(Submission, submission_id)
+    if not submission or submission.assignment.teacher_id != current_user.id:
+        abort(403)
+    submission.grade = request.form.get("grade")
+    submission.feedback = request.form.get("feedback")
+    db.session.commit()
+    flash("Feedback saved!", "success")
+    return redirect(url_for("view_submissions", assignment_id=submission.assignment_id))
 
 
 @app.route("/calendar")
@@ -1273,6 +1400,11 @@ with app.app_context():
 
     if "events" not in inspector.get_table_names():
         Event.__table__.create(db.engine)
+
+    if "assignments" not in inspector.get_table_names():
+        Assignment.__table__.create(db.engine)
+    if "submissions" not in inspector.get_table_names():
+        Submission.__table__.create(db.engine)
 
     if not User.query.filter_by(username="admin").first():
         default_admin = User(
