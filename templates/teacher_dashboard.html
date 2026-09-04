@@ -17,7 +17,7 @@
 {% if current_user.assigned_class %}
 <a href="{{ url_for('mark_attendance') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">Mark Attendance ({{ current_user.assigned_class }})</a>
 {% endif %}
-<a href="{{ url_for('view_timetable') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">View Timetable</a>
+<a href="{{ url_for('view_timetable') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">View Timetable</a> <a href="{{ url_for('view_calendar') }}" class="btn btn-secondary" style="margin-bottom:15px; display:inline-block;">School Calendar</a>
 
 <div class="card" style="margin-top:20px;">
     <h3>My Teaching Assignments</h3>

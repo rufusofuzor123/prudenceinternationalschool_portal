@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>School Calendar</h2>
+
+{% if current_user.role == 'admin' %}
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>Add Event</h3>
+    <form method="POST" action="{{ url_for('admin_dashboard') }}">
+        <input type="hidden" name="action" value="add_event">
+        <div class="form-group"><label>Title</label><input type="text" name="event_title" class="form-control" required></div>
+        <div class="form-group"><label>Description</label><textarea name="event_description" class="form-control" rows="2"></textarea></div>
+        <div class="form-group"><label>Date</label><input type="date" name="event_date" class="form-control" required></div>
+        <div class="form-group">
+            <label>Type</label>
+            <select name="event_type" class="form-control">
+                <option>General</option>
+                <option>Holiday</option>
+                <option>Exam</option>
+                <option>Meeting</option>
+                <option>Sport</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Event</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead><tr><th>Date</th><th>Title</th><th>Type</th><th>Description</th>{% if current_user.role == 'admin' %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+            {% for e in events %}
+            <tr>
+                <td>{{ e.event_date.strftime('%d %b %Y') }}</td>
+                <td>{{ e.title }}</td>
+                <td>{{ e.event_type }}</td>
+                <td>{{ e.description or '' }}</td>
+                {% if current_user.role == 'admin' %}
+                <td>
+                    <form method="POST" action="{{ url_for('delete_event', event_id=e.id) }}" onsubmit="return confirm('Delete this event?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr><td colspan="5">No events scheduled.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

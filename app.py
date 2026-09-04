@@ -162,6 +162,15 @@ class Payment(db.Model):
     session = db.relationship("Session", backref="payments")
 
 
+class Event(db.Model):
+    __tablename__ = "events"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    event_date = db.Column(db.Date, nullable=False)
+    event_type = db.Column(db.String(30), nullable=False, default="General")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -658,6 +667,13 @@ def enter_grades(student_id: int):
     return redirect(url_for("teacher_dashboard"))
 
 
+@app.route("/calendar")
+@login_required
+def view_calendar():
+    events = Event.query.order_by(Event.event_date.asc()).all()
+    return render_template("calendar.html", events=events)
+
+
 @app.route("/timetable")
 @login_required
 def view_timetable():
@@ -968,6 +984,18 @@ def admin_dashboard():
                 else:
                     flash("This assignment already exists.", "danger")
 
+        elif action == "add_event":
+            event_title = request.form.get("event_title")
+            event_desc = request.form.get("event_description")
+            event_date_str = request.form.get("event_date")
+            event_type = request.form.get("event_type", "General")
+            if event_title and event_date_str:
+                from datetime import datetime as dt
+                event_date = dt.strptime(event_date_str, "%Y-%m-%d").date()
+                db.session.add(Event(title=event_title, description=event_desc, event_date=event_date, event_type=event_type))
+                db.session.commit()
+                flash("Event added to calendar!", "success")
+
         elif action == "post_notice":
             notice_title = request.form.get("notice_title")
             notice_body = request.form.get("notice_body")
@@ -1097,6 +1125,19 @@ def delete_assignment(assignment_id):
     return redirect(url_for("admin_dashboard"))
 
 
+@app.route("/admin/delete-event/<int:event_id>", methods=["POST"])
+@login_required
+def delete_event(event_id):
+    if current_user.role != "admin":
+        abort(403)
+    e = db.session.get(Event, event_id)
+    if e:
+        db.session.delete(e)
+        db.session.commit()
+        flash("Event removed.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/admin/delete-notice/<int:notice_id>", methods=["POST"])
 @login_required
 def delete_notice(notice_id):
@@ -1191,6 +1232,9 @@ with app.app_context():
     if "staff_phone" not in user_columns_2:
         db.session.execute(text("ALTER TABLE users ADD COLUMN staff_phone VARCHAR(20)"))
         db.session.commit()
+
+    if "events" not in inspector.get_table_names():
+        Event.__table__.create(db.engine)
 
     if not User.query.filter_by(username="admin").first():
         default_admin = User(
