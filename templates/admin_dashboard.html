@@ -2,6 +2,14 @@
 {% block content %}
 <h2>Admin Control Panel</h2>
 
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>Export Records (CSV)</h3>
+    <a href="{{ url_for('export_users') }}" class="btn btn-secondary btn-sm">Users</a>
+    <a href="{{ url_for('export_results') }}" class="btn btn-secondary btn-sm">Results</a>
+    <a href="{{ url_for('export_attendance') }}" class="btn btn-secondary btn-sm">Attendance</a>
+    <a href="{{ url_for('export_payments') }}" class="btn btn-secondary btn-sm">Payments</a>
+</div>
+
 <div class="card" style="margin-bottom:20px; border: 2px solid #dc3545;">
     <h3 style="color:#dc3545;">Danger Zone — Reset Portal Data</h3>
     <p>This permanently deletes ALL users, classes, sessions, subjects, results, and attendance. Type <strong>RESET</strong> below to confirm.</p>

@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, render_template, request, redirect, url_for, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -652,6 +652,86 @@ def grade_class(assignment_id):
         student_results.append((student, res))
 
     return render_template("grade_class.html", assignment=assignment, student_results=student_results)
+
+
+@app.route("/admin/export/users")
+@login_required
+def export_users():
+    if current_user.role != "admin":
+        abort(403)
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Full Name", "Username", "Role", "Email", "Class", "Fee Paid", "Parent Name", "Parent Email", "Parent Phone"])
+    for u in User.query.all():
+        writer.writerow([u.id, u.full_name, u.username, u.role, u.email or "", u.assigned_class or "", u.fee_paid, u.parent_name or "", u.parent_email or "", u.parent_phone or ""])
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=users.csv"
+    return response
+
+
+@app.route("/admin/export/results")
+@login_required
+def export_results():
+    if current_user.role != "admin":
+        abort(403)
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Student", "Class", "Subject", "CA1", "CA2", "Exam", "Total", "Grade", "Session"])
+    for r in AcademicResult.query.all():
+        writer.writerow([
+            r.student.full_name if r.student else "",
+            r.student.assigned_class if r.student else "",
+            r.subject.name if r.subject else "",
+            r.ca1_score, r.ca2_score, r.exam_score, r.total_score, r.grade,
+            r.session.name if r.session else ""
+        ])
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=results.csv"
+    return response
+
+
+@app.route("/admin/export/attendance")
+@login_required
+def export_attendance():
+    if current_user.role != "admin":
+        abort(403)
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Student", "Class", "Date", "Status", "Session"])
+    for a in Attendance.query.all():
+        writer.writerow([
+            a.student.full_name if a.student else "",
+            a.student.assigned_class if a.student else "",
+            a.date, a.status,
+            a.session.name if a.session else ""
+        ])
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=attendance.csv"
+    return response
+
+
+@app.route("/admin/export/payments")
+@login_required
+def export_payments():
+    if current_user.role != "admin":
+        abort(403)
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Student", "Class", "Reference", "Amount", "Date Paid", "Session"])
+    for p in Payment.query.all():
+        writer.writerow([
+            p.student.full_name if p.student else "",
+            p.student.assigned_class if p.student else "",
+            p.reference, p.amount, p.date_paid,
+            p.session.name if p.session else ""
+        ])
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=payments.csv"
+    return response
 
 
 @app.route("/admin/dashboard", methods=["GET", "POST"])
