@@ -256,6 +256,67 @@ def change_password():
     return render_template("change_password.html")
 
 
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        username_or_email = request.form.get("username_or_email")
+        user = User.query.filter(
+            (User.username == username_or_email) | (User.email == username_or_email)
+        ).first()
+        if user and user.email:
+            from itsdangerous import URLSafeTimedSerializer
+            serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+            token = serializer.dumps(user.id, salt="password-reset")
+            reset_url = url_for("reset_password", token=token, _external=True)
+            try:
+                msg = Message(
+                    subject="Password Reset - Prudence International School Portal",
+                    recipients=[user.email],
+                    body=f"Hello {user.full_name},\n\nClick the link below to reset your password. This link expires in 30 minutes.\n\n{reset_url}\n\nIf you did not request this, ignore this email."
+                )
+                mail.send(msg)
+            except Exception:
+                pass
+        flash("If an account with that username/email exists, a reset link has been sent.", "info")
+        return redirect(url_for("login"))
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+    serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    try:
+        user_id = serializer.loads(token, salt="password-reset", max_age=1800)
+    except SignatureExpired:
+        flash("This reset link has expired. Please request a new one.", "danger")
+        return redirect(url_for("forgot_password"))
+    except BadSignature:
+        flash("Invalid reset link.", "danger")
+        return redirect(url_for("forgot_password"))
+
+    user = db.session.get(User, user_id)
+    if not user:
+        flash("Invalid reset link.", "danger")
+        return redirect(url_for("forgot_password"))
+
+    if request.method == "POST":
+        new_pw = request.form.get("new_password")
+        confirm_pw = request.form.get("confirm_password")
+        if not new_pw or len(new_pw) < 6:
+            flash("Password must be at least 6 characters.", "danger")
+            return redirect(url_for("reset_password", token=token))
+        if new_pw != confirm_pw:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for("reset_password", token=token))
+        user.set_password(new_pw)
+        db.session.commit()
+        flash("Password reset successfully! You can now log in.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_password.html", token=token)
+
+
 @app.route("/logout")
 @login_required
 def logout():
