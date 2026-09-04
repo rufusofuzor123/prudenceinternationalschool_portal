@@ -64,6 +64,9 @@ class User(UserMixin, db.Model):
     parent_name = db.Column(db.String(120), nullable=True)
     parent_email = db.Column(db.String(120), nullable=True)
     parent_phone = db.Column(db.String(20), nullable=True)
+    qualification = db.Column(db.String(200), nullable=True)
+    hire_date = db.Column(db.Date, nullable=True)
+    staff_phone = db.Column(db.String(20), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -861,6 +864,11 @@ def admin_dashboard():
             parent_name = request.form.get("parent_name")
             parent_email = request.form.get("parent_email")
             parent_phone = request.form.get("parent_phone")
+            qualification = request.form.get("qualification")
+            hire_date_str = request.form.get("hire_date")
+            staff_phone = request.form.get("staff_phone")
+            from datetime import datetime as dt
+            hire_date = dt.strptime(hire_date_str, "%Y-%m-%d").date() if hire_date_str else None
 
             if not User.query.filter_by(username=username).first():
                 new_user = User(
@@ -871,7 +879,10 @@ def admin_dashboard():
                     assigned_class=assigned_class,
                     parent_name=parent_name,
                     parent_email=parent_email,
-                    parent_phone=parent_phone
+                    parent_phone=parent_phone,
+                    qualification=qualification,
+                    hire_date=hire_date,
+                    staff_phone=staff_phone
                 )
                 new_user.set_password(password)
                 db.session.add(new_user)
@@ -1032,6 +1043,15 @@ def admin_dashboard():
         results_published=published,
         current_term=current_term
     )
+@app.route("/admin/staff-records")
+@login_required
+def staff_records():
+    if current_user.role != "admin":
+        abort(403)
+    teachers = User.query.filter_by(role="teacher").all()
+    return render_template("staff_records.html", teachers=teachers)
+
+
 @app.route("/admin/reset-portal-data", methods=["POST"])
 @login_required
 def reset_portal_data():
@@ -1160,6 +1180,17 @@ with app.app_context():
 
     if "payments" not in inspector.get_table_names():
         Payment.__table__.create(db.engine)
+
+    user_columns_2 = [col["name"] for col in inspector.get_columns("users")]
+    if "qualification" not in user_columns_2:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN qualification VARCHAR(200)"))
+        db.session.commit()
+    if "hire_date" not in user_columns_2:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN hire_date DATE"))
+        db.session.commit()
+    if "staff_phone" not in user_columns_2:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN staff_phone VARCHAR(20)"))
+        db.session.commit()
 
     if not User.query.filter_by(username="admin").first():
         default_admin = User(

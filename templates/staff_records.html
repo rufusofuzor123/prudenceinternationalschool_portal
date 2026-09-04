@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Staff Records</h2>
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead>
+            <tr><th>Name</th><th>Username</th><th>Class Assigned</th><th>Qualification</th><th>Hire Date</th><th>Phone</th><th>Email</th></tr>
+        </thead>
+        <tbody>
+            {% for t in teachers %}
+            <tr>
+                <td>{{ t.full_name }}</td>
+                <td>{{ t.username }}</td>
+                <td>{{ t.assigned_class or 'N/A' }}</td>
+                <td>{{ t.qualification or 'N/A' }}</td>
+                <td>{{ t.hire_date or 'N/A' }}</td>
+                <td>{{ t.staff_phone or 'N/A' }}</td>
+                <td>{{ t.email or 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Admin Control Panel</h2>
+<a href="{{ url_for('staff_records') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">View Staff Records</a>
 
 <div class="card no-print" style="margin-bottom:20px;">
     <h3>Export Records (CSV)</h3>
@@ -62,6 +63,9 @@
             <div class="form-group"><label>Parent Name (optional)</label><input type="text" name="parent_name" class="form-control"></div>
             <div class="form-group"><label>Parent Email (optional)</label><input type="email" name="parent_email" class="form-control"></div>
             <div class="form-group"><label>Parent Phone (optional)</label><input type="text" name="parent_phone" class="form-control"></div>
+            <div class="form-group"><label>Qualification (staff only)</label><input type="text" name="qualification" class="form-control"></div>
+            <div class="form-group"><label>Hire Date (staff only)</label><input type="date" name="hire_date" class="form-control"></div>
+            <div class="form-group"><label>Staff Phone (staff only)</label><input type="text" name="staff_phone" class="form-control"></div>
             <button type="submit" class="btn btn-primary">Create User</button>
         </form>
     </div>
