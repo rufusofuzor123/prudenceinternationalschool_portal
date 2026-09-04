@@ -553,14 +553,15 @@ def enter_grades(student_id: int):
 def view_timetable():
     if current_user.role == "student":
         class_name = current_user.assigned_class
-    elif current_user.role == "teacher":
-        class_name = current_user.assigned_class
+        classes = None
     else:
-        class_name = request.args.get("class_name", "")
+        classes = SchoolClass.query.all()
+        default_class = current_user.assigned_class if current_user.role == "teacher" else ""
+        class_name = request.args.get("class_name", default_class or "")
 
     entries = TimetableEntry.query.filter_by(class_name=class_name).all() if class_name else []
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    return render_template("timetable.html", entries=entries, days=days, class_name=class_name)
+    return render_template("timetable.html", entries=entries, days=days, class_name=class_name, classes=classes)
 
 
 @app.route("/teacher/attendance", methods=["GET", "POST"])
