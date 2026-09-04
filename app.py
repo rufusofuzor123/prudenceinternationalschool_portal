@@ -146,6 +146,19 @@ class TeacherAssignment(db.Model):
     subject = db.relationship("Subject", backref="teaching_assignments")
 
 
+class Payment(db.Model):
+    __tablename__ = "payments"
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey("sessions.id"), nullable=True)
+    amount = db.Column(db.Float, nullable=False)
+    reference = db.Column(db.String(100), nullable=False, unique=True)
+    date_paid = db.Column(db.DateTime, nullable=False)
+
+    student = db.relationship("User", backref="payments")
+    session = db.relationship("Session", backref="payments")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -449,6 +462,18 @@ def verify_payment():
 
         if res_data.get("status") and res_data["data"]["status"] == "success":
             current_user.fee_paid = True
+            from datetime import datetime
+            current_session = get_current_session()
+            paid_amount = res_data["data"]["amount"] / 100
+            existing_payment = Payment.query.filter_by(reference=reference).first()
+            if not existing_payment:
+                db.session.add(Payment(
+                    student_id=current_user.id,
+                    session_id=current_session.id if current_session else None,
+                    amount=paid_amount,
+                    reference=reference,
+                    date_paid=datetime.utcnow()
+                ))
             db.session.commit()
             flash("Online payment verified successfully! Your term clearance is now active.", "success")
         else:
@@ -457,6 +482,28 @@ def verify_payment():
         flash("Verification service unavailable.", "danger")
 
     return redirect(url_for("student_dashboard"))
+
+
+@app.route("/receipts")
+@login_required
+def list_receipts():
+    if current_user.role != "student":
+        abort(403)
+    payments = Payment.query.filter_by(student_id=current_user.id).order_by(Payment.date_paid.desc()).all()
+    return render_template("receipts.html", payments=payments)
+
+
+@app.route("/receipt/<int:payment_id>")
+@login_required
+def view_receipt(payment_id):
+    payment = db.session.get(Payment, payment_id)
+    if not payment:
+        abort(404)
+    if current_user.role == "student" and payment.student_id != current_user.id:
+        abort(403)
+    if current_user.role not in ["student", "admin"]:
+        abort(403)
+    return render_template("receipt.html", payment=payment)
 
 
 @app.route("/teacher/dashboard")
@@ -893,6 +940,9 @@ with app.app_context():
     if "parent_phone" not in user_columns:
         db.session.execute(text("ALTER TABLE users ADD COLUMN parent_phone VARCHAR(20)"))
         db.session.commit()
+
+    if "payments" not in inspector.get_table_names():
+        Payment.__table__.create(db.engine)
 
     if not User.query.filter_by(username="admin").first():
         default_admin = User(
