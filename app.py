@@ -1497,29 +1497,62 @@ def delete_notice(notice_id):
     return redirect(url_for("admin_dashboard"))
 
 
+def send_sms(phone_number, message):
+    api_key = os.environ.get("TERMII_API_KEY")
+    sender_id = os.environ.get("TERMII_SENDER_ID")
+    if not api_key or not sender_id or not phone_number:
+        return False
+    try:
+        response = requests.post(
+            "https://api.ng.termii.com/api/sms/send",
+            json={
+                "to": phone_number,
+                "from": sender_id,
+                "sms": message,
+                "type": "plain",
+                "channel": "generic",
+                "api_key": api_key
+            },
+            timeout=10
+        )
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
 def send_result_notifications():
     students = User.query.filter_by(role="student").all()
     sent_count = 0
+    sms_sent_count = 0
     for student in students:
-        if not student.parent_email:
-            continue
-        try:
-            msg = Message(
-                subject="Term Result Published - Prudence International School",
-                recipients=[student.parent_email],
-                body=(
-                    f"Dear {student.parent_name or 'Parent/Guardian'},\n\n"
-                    f"The term result for {student.full_name} has been published and is now "
-                    f"available on the school portal.\n\n"
-                    f"Please log in to the portal to view or print the result sheet.\n\n"
-                    f"Regards,\nPrudence International School"
+        if student.parent_email:
+            try:
+                msg = Message(
+                    subject="Term Result Published - Prudence International School",
+                    recipients=[student.parent_email],
+                    body=(
+                        f"Dear {student.parent_name or 'Parent/Guardian'},\n\n"
+                        f"The term result for {student.full_name} has been published and is now "
+                        f"available on the school portal.\n\n"
+                        f"Please log in to the portal to view or print the result sheet.\n\n"
+                        f"Regards,\nPrudence International School"
+                    )
                 )
+                mail.send(msg)
+                sent_count += 1
+            except Exception:
+                pass
+
+        if student.parent_phone:
+            sms_text = (
+                f"Dear {student.parent_name or 'Parent/Guardian'}, the term result for "
+                f"{student.full_name} has been published. Please log in to the school portal to view it. "
+                f"- Prudence International School"
             )
-            mail.send(msg)
-            sent_count += 1
-        except Exception:
-            pass
-    return sent_count
+            if send_sms(student.parent_phone, sms_text):
+                sms_sent_count += 1
+
+    return sent_count, sms_sent_count
 
 
 @app.route("/admin/toggle-results", methods=["POST"])
@@ -1537,8 +1570,8 @@ def toggle_results():
     db.session.commit()
 
     if setting.value == "true":
-        sent = send_result_notifications()
-        flash(f"Term results are now published and live for students! Notified {sent} parent(s) by email.", "info")
+        email_count, sms_count = send_result_notifications()
+        flash(f"Term results are now published and live for students! Notified {email_count} parent(s) by email and {sms_count} by SMS.", "info")
     else:
         flash("Term results are now hidden/unpublished.", "info")
     return redirect(url_for("admin_dashboard"))
