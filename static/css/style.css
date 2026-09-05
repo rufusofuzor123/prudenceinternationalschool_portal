@@ -58,7 +58,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #8D6E63; margin: 
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
 .table-wrapper { overflow-x: auto; margin-top: 15px; border-radius: 8px; }
-.data-table { width: 100%; border-collapse: collapse; min-width: 600px; background: white; }
+.data-table { width: 100%; border-collapse: collapse; background: white; }
 .data-table th, .data-table td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; }
 .data-table th { background: #003366; color: white; font-weight: 600; }
 .data-table tbody tr:nth-child(even) { background: #f7f7f7; }
