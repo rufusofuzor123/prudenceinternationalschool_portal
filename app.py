@@ -1570,8 +1570,13 @@ def toggle_results():
     db.session.commit()
 
     if setting.value == "true":
-        email_count, sms_count = send_result_notifications()
-        flash(f"Term results are now published and live for students! Notified {email_count} parent(s) by email and {sms_count} by SMS.", "info")
+        import threading
+        app_ctx = app.app_context()
+        def notify_in_background():
+            with app_ctx:
+                send_result_notifications()
+        threading.Thread(target=notify_in_background, daemon=True).start()
+        flash("Term results are now published and live for students! Parent notifications (email/SMS) are being sent in the background.", "info")
     else:
         flash("Term results are now hidden/unpublished.", "info")
     return redirect(url_for("admin_dashboard"))
