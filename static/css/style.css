@@ -16,7 +16,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #8D6E63; margin: 
 
 .school-header { background: #FFA500; color: #003366; padding: 15px 20px; border-bottom: 3px solid #003366; }
 
-.container { padding: 16px; max-width: 1200px; margin: 0 auto; }
+.container { padding: 16px; max-width: 1200px; margin: 0 auto; overflow-x: hidden; }
 
 .card {
     background: white;
@@ -29,11 +29,19 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #8D6E63; margin: 
 
 .card-center { max-width: 400px; margin: 50px auto; }
 
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.dashboard-grid > * { min-width: 0; }
+.card { min-width: 0; }
 @media (max-width: 768px) {
     .dashboard-grid { grid-template-columns: 1fr; }
     .navbar { flex-direction: column; align-items: flex-start; }
     .navbar span { width: 100%; }
+    .container { padding: 10px; }
+    .card { padding: 14px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 17px; }
+    .btn { padding: 9px 14px; font-size: 13px; }
+    .school-header h2 { font-size: 18px; }
 }
 
 .form-group { margin-bottom: 15px; }
