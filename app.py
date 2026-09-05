@@ -1400,6 +1400,32 @@ def staff_records():
     return render_template("staff_records.html", teachers=teachers)
 
 
+@app.route("/admin/delete-user/<int:user_id>", methods=["POST"])
+@login_required
+def delete_user(user_id):
+    if current_user.role != "admin":
+        abort(403)
+    user_to_delete = db.session.get(User, user_id)
+    if not user_to_delete:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_dashboard"))
+    if user_to_delete.username == "admin":
+        flash("Cannot delete the default admin account.", "danger")
+        return redirect(url_for("admin_dashboard"))
+    if user_to_delete.id == current_user.id:
+        flash("You cannot delete your own account.", "danger")
+        return redirect(url_for("admin_dashboard"))
+
+    try:
+        db.session.delete(user_to_delete)
+        db.session.commit()
+        flash(f"User {user_to_delete.full_name} deleted.", "success")
+    except Exception:
+        db.session.rollback()
+        flash(f"Could not delete {user_to_delete.full_name} — they have existing records (results, attendance, payments, etc.) linked to their account. Remove or reassign those first, or contact support for a full purge.", "danger")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/admin/reset-portal-data", methods=["POST"])
 @login_required
 def reset_portal_data():
