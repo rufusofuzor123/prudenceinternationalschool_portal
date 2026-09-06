@@ -380,7 +380,7 @@
                 <td>{% if user.role == 'student' %}{{ 'Paid' if user.fee_paid else 'Unpaid' }}{% else %}N/A{% endif %}</td>
                 <td>
                     {% if user.username != 'admin' %}
-                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('Permanently delete this user? This cannot be undone.');">
+                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('Permanently delete this user AND all their linked records (results, attendance, payments, submissions, etc.)? This cannot be undone.');">
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>
                     {% endif %}

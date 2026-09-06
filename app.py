@@ -1417,12 +1417,31 @@ def delete_user(user_id):
         return redirect(url_for("admin_dashboard"))
 
     try:
+        AcademicResult.query.filter_by(student_id=user_id).delete()
+        Attendance.query.filter_by(student_id=user_id).delete()
+        Payment.query.filter_by(student_id=user_id).delete()
+        Submission.query.filter_by(student_id=user_id).delete()
+        QuizAttempt.query.filter_by(student_id=user_id).delete()
+        TeacherAssignment.query.filter_by(teacher_id=user_id).delete()
+        TimetableEntry.query.filter_by(teacher_id=user_id).delete()
+
+        teacher_quizzes = Quiz.query.filter_by(teacher_id=user_id).all()
+        for q in teacher_quizzes:
+            QuizAttempt.query.filter_by(quiz_id=q.id).delete()
+            Question.query.filter_by(quiz_id=q.id).delete()
+        Quiz.query.filter_by(teacher_id=user_id).delete()
+
+        teacher_assignments_posted = Assignment.query.filter_by(teacher_id=user_id).all()
+        for a in teacher_assignments_posted:
+            Submission.query.filter_by(assignment_id=a.id).delete()
+        Assignment.query.filter_by(teacher_id=user_id).delete()
+
         db.session.delete(user_to_delete)
         db.session.commit()
-        flash(f"User {user_to_delete.full_name} deleted.", "success")
-    except Exception:
+        flash(f"User {user_to_delete.full_name} and all their linked records deleted.", "success")
+    except Exception as e:
         db.session.rollback()
-        flash(f"Could not delete {user_to_delete.full_name} — they have existing records (results, attendance, payments, etc.) linked to their account. Remove or reassign those first, or contact support for a full purge.", "danger")
+        flash(f"Could not delete {user_to_delete.full_name}: {str(e)}", "danger")
     return redirect(url_for("admin_dashboard"))
 
 
