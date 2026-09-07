@@ -23,6 +23,7 @@
             <button type="submit" class="btn btn-sm btn-secondary">Upload Passport</button>
         </form>
         <p><strong>Class:</strong> {{ current_user.assigned_class or 'Unassigned' }}</p>
+        <p><strong>Admission Number:</strong> {{ current_user.admission_number or 'N/A' }}</p>
         <div class="no-print">
             <p><strong>Fee Clearance Status:</strong>
                 {% if current_user.fee_paid %}

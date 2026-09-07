@@ -67,6 +67,7 @@ class User(UserMixin, db.Model):
     qualification = db.Column(db.String(200), nullable=True)
     hire_date = db.Column(db.Date, nullable=True)
     staff_phone = db.Column(db.String(20), nullable=True)
+    admission_number = db.Column(db.String(50), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -1169,6 +1170,16 @@ def admin_dashboard():
             hire_date = dt.strptime(hire_date_str, "%Y-%m-%d").date() if hire_date_str else None
 
             if not User.query.filter_by(username=username).first():
+                admission_number = None
+                if role == "student":
+                    current_session = get_current_session()
+                    current_term = get_current_term()
+                    term_abbr_map = {"First Term": "1ST", "Second Term": "2ND", "Third Term": "3RD"}
+                    term_abbr = term_abbr_map.get(current_term, "1ST")
+                    session_label = current_session.name.replace("/", "-") if current_session else "PENDING"
+                    seq = User.query.filter_by(role="student").count() + 1
+                    admission_number = f"{session_label}-{term_abbr}-{seq:04d}"
+
                 new_user = User(
                     username=username,
                     full_name=full_name,
@@ -1180,12 +1191,16 @@ def admin_dashboard():
                     parent_phone=parent_phone,
                     qualification=qualification,
                     hire_date=hire_date,
-                    staff_phone=staff_phone
+                    staff_phone=staff_phone,
+                    admission_number=admission_number
                 )
                 new_user.set_password(password)
                 db.session.add(new_user)
                 db.session.commit()
-                flash(f"New {role} account created successfully!", "success")
+                if admission_number:
+                    flash(f"New {role} account created successfully! Admission Number: {admission_number}", "success")
+                else:
+                    flash(f"New {role} account created successfully!", "success")
             else:
                 flash("Username already exists.", "danger")
 
@@ -1634,6 +1649,10 @@ with app.app_context():
         db.session.commit()
     if "staff_phone" not in user_columns_2:
         db.session.execute(text("ALTER TABLE users ADD COLUMN staff_phone VARCHAR(20)"))
+        db.session.commit()
+
+    if "admission_number" not in user_columns_2:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN admission_number VARCHAR(50)"))
         db.session.commit()
 
     if "events" not in inspector.get_table_names():
