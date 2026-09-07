@@ -1,0 +1,72 @@
+<html>
+<head>
+<style>
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #222; }
+    .header-table { width: 100%; border-bottom: 3px solid #003366; padding-bottom: 10px; margin-bottom: 15px; }
+    .school-name { font-size: 20px; font-weight: bold; color: #003366; }
+    .motto { font-style: italic; font-size: 11px; }
+    .address { font-size: 10px; }
+    .title { text-align: center; font-size: 16px; font-weight: bold; margin: 15px 0; text-decoration: underline; }
+    .info-table { width: 100%; margin-bottom: 15px; }
+    .info-table td { padding: 3px 0; font-size: 12px; }
+    .results-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .results-table th { background: #003366; color: white; padding: 6px; border: 1px solid #999; font-size: 11px; }
+    .results-table td { padding: 6px; border: 1px solid #999; font-size: 11px; text-align: center; }
+    .summary { margin-top: 15px; font-size: 12px; }
+    .footer { margin-top: 40px; font-size: 10px; text-align: center; color: #666; }
+</style>
+</head>
+<body>
+
+<table class="header-table">
+    <tr>
+        <td width="70%">
+            <div class="school-name">Prudence International School</div>
+            <div class="motto">Knowledge, Character, Excellence</div>
+            <div class="address">Okpanam, Delta State</div>
+        </td>
+    </tr>
+</table>
+
+<div class="title">Terminal Examination Report Card</div>
+
+<table class="info-table">
+    <tr>
+        <td width="50%"><strong>Student Name:</strong> {{ student.full_name }}</td>
+        <td width="50%"><strong>Admission No:</strong> {{ student.admission_number or 'N/A' }}</td>
+    </tr>
+    <tr>
+        <td><strong>Class:</strong> {{ student.assigned_class or 'N/A' }}</td>
+        <td><strong>Session:</strong> {{ session.name if session else 'N/A' }}</td>
+    </tr>
+</table>
+
+<table class="results-table">
+    <tr>
+        <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total</th><th>Grade</th><th>Position</th><th>Class Avg</th>
+    </tr>
+    {% for res in results %}
+    <tr>
+        <td>{{ res.subject.name }}</td>
+        <td>{{ res.ca1_score }}</td>
+        <td>{{ res.ca2_score }}</td>
+        <td>{{ res.exam_score }}</td>
+        <td><strong>{{ res.total_score }}</strong></td>
+        <td>{{ res.grade }}</td>
+        <td>{% if subject_positions.get(res.subject_id) %}{{ subject_positions[res.subject_id][0] }}/{{ subject_positions[res.subject_id][1] }}{% else %}N/A{% endif %}</td>
+        <td>{% if subject_positions.get(res.subject_id) %}{{ subject_positions[res.subject_id][2] }}{% else %}N/A{% endif %}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="summary">
+    <strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}<br/>
+    <strong>Overall Average:</strong> {{ class_average }}
+</div>
+
+<div class="footer">
+    This is a computer-generated report card from Prudence International School Portal.
+</div>
+
+</body>
+</html>

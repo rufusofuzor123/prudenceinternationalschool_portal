@@ -6,6 +6,8 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message
+from xhtml2pdf import pisa
+import io
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "prudence-secret-key-998877")
@@ -685,6 +687,46 @@ def verify_payment():
         flash("Verification service unavailable.", "danger")
 
     return redirect(url_for("student_dashboard"))
+
+
+@app.route("/student/report-card/pdf")
+@login_required
+def download_report_card():
+    if current_user.role != "student":
+        abort(403)
+    if not is_results_published():
+        flash("Results have not been published yet.", "danger")
+        return redirect(url_for("student_dashboard"))
+    if not current_user.fee_paid:
+        flash("Fee payment clearance is required to download your report card.", "danger")
+        return redirect(url_for("student_dashboard"))
+
+    current_session = get_current_session()
+    result_filter = {"student_id": current_user.id}
+    if current_session:
+        result_filter["session_id"] = current_session.id
+    results = AcademicResult.query.filter_by(**result_filter).all()
+    subject_positions = get_subject_positions(current_user)
+    class_pos, class_total, class_avg = get_class_position(current_user)
+
+    html = render_template(
+        "report_card_pdf.html",
+        student=current_user,
+        results=results,
+        subject_positions=subject_positions,
+        class_position=class_pos,
+        class_total=class_total,
+        class_average=class_avg,
+        session=current_session
+    )
+
+    pdf_buffer = io.BytesIO()
+    pisa.CreatePDF(html, dest=pdf_buffer)
+    pdf_buffer.seek(0)
+
+    response = Response(pdf_buffer.read(), mimetype="application/pdf")
+    response.headers["Content-Disposition"] = f"attachment; filename=report_card_{current_user.username}.pdf"
+    return response
 
 
 @app.route("/receipts")

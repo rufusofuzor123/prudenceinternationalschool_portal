@@ -107,6 +107,7 @@
         </div>
     {% else %}
         <button onclick="window.print()" class="btn btn-secondary no-print" style="margin-bottom:15px;">Print Result Sheet</button>
+        <a href="{{ url_for('download_report_card') }}" class="btn btn-primary no-print" style="margin-bottom:15px; display:inline-block;">Download PDF Report Card</a>
         <div class="table-wrapper">
         <table class="data-table">
             <thead>
