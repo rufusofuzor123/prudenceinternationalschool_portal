@@ -242,6 +242,13 @@ class QuizAttempt(db.Model):
     student = db.relationship("User", backref="quiz_attempts")
 
 
+class GradingScale(db.Model):
+    __tablename__ = "grading_scales"
+    id = db.Column(db.Integer, primary_key=True)
+    grade_letter = db.Column(db.String(2), nullable=False)
+    min_score = db.Column(db.Float, nullable=False)
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -264,16 +271,11 @@ class AcademicResult(db.Model):
     @property
     def grade(self) -> str:
         score = self.total_score
-        grade_letter = "F"
-        if score >= 70.0:
-            grade_letter = "A"
-        elif score >= 60.0:
-            grade_letter = "B"
-        elif score >= 50.0:
-            grade_letter = "C"
-        elif score >= 40.0:
-            grade_letter = "D"
-        return grade_letter
+        scales = GradingScale.query.order_by(GradingScale.min_score.desc()).all()
+        for s in scales:
+            if score >= s.min_score:
+                return s.grade_letter
+        return "F"
 
 
 @login_manager.user_loader
@@ -1260,6 +1262,18 @@ def admin_dashboard():
             else:
                 flash("Please select two different classes.", "danger")
 
+        elif action == "set_grading_scale":
+            gs_letter = request.form.get("gs_letter")
+            gs_min = request.form.get("gs_min")
+            if gs_letter and gs_min:
+                existing_gs = GradingScale.query.filter_by(grade_letter=gs_letter).first()
+                if existing_gs:
+                    existing_gs.min_score = float(gs_min)
+                else:
+                    db.session.add(GradingScale(grade_letter=gs_letter, min_score=float(gs_min)))
+                db.session.commit()
+                flash(f"Grading scale for {gs_letter} saved!", "success")
+
         elif action == "assign_teacher":
             ta_teacher_id = request.form.get("ta_teacher_id")
             ta_subject_id = request.form.get("ta_subject_id")
@@ -1391,6 +1405,8 @@ def admin_dashboard():
         "attendance_rates": attendance_rates
     })
 
+    grading_scales = GradingScale.query.order_by(GradingScale.min_score.desc()).all()
+
     return render_template(
         "admin_dashboard.html",
         users=users,
@@ -1404,7 +1420,8 @@ def admin_dashboard():
         teacher_assignments=teacher_assignments,
         results_published=published,
         current_term=current_term,
-        chart_data=chart_data
+        chart_data=chart_data,
+        grading_scales=grading_scales
     )
 @app.route("/admin/staff-records")
 @login_required
@@ -1515,6 +1532,19 @@ def delete_event(event_id):
         db.session.delete(e)
         db.session.commit()
         flash("Event removed.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/delete-grading-scale/<int:scale_id>", methods=["POST"])
+@login_required
+def delete_grading_scale(scale_id):
+    if current_user.role != "admin":
+        abort(403)
+    g = db.session.get(GradingScale, scale_id)
+    if g:
+        db.session.delete(g)
+        db.session.commit()
+        flash("Grading scale entry removed.", "success")
     return redirect(url_for("admin_dashboard"))
 
 
@@ -1653,6 +1683,16 @@ with app.app_context():
 
     if "admission_number" not in user_columns_2:
         db.session.execute(text("ALTER TABLE users ADD COLUMN admission_number VARCHAR(50)"))
+        db.session.commit()
+
+    if "grading_scales" not in inspector.get_table_names():
+        GradingScale.__table__.create(db.engine)
+
+    if GradingScale.query.count() == 0:
+        db.session.add(GradingScale(grade_letter="A", min_score=70.0))
+        db.session.add(GradingScale(grade_letter="B", min_score=60.0))
+        db.session.add(GradingScale(grade_letter="C", min_score=50.0))
+        db.session.add(GradingScale(grade_letter="D", min_score=40.0))
         db.session.commit()
 
     if "events" not in inspector.get_table_names():

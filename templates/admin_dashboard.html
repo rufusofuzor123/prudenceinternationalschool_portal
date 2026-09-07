@@ -334,6 +334,44 @@
 </div>
 
 <div class="card" style="margin-top:20px;">
+    <h3>Grading Scale</h3>
+    <p style="font-size:13px; color:#666;">Set the minimum score needed for each grade letter.</p>
+    <form method="POST" style="margin-bottom:15px;">
+        <input type="hidden" name="action" value="set_grading_scale">
+        <div class="form-group">
+            <label>Grade Letter</label>
+            <select name="gs_letter" class="form-control">
+                <option>A</option>
+                <option>B</option>
+                <option>C</option>
+                <option>D</option>
+                <option>E</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Minimum Score</label><input type="number" step="0.1" name="gs_min" class="form-control" required></div>
+        <button type="submit" class="btn btn-primary">Save Grade</button>
+    </form>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Grade</th><th>Minimum Score</th><th></th></tr></thead>
+            <tbody>
+                {% for g in grading_scales %}
+                <tr>
+                    <td>{{ g.grade_letter }}</td>
+                    <td>{{ g.min_score }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_grading_scale', scale_id=g.id) }}" onsubmit="return confirm('Remove this grade level?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top:20px;">
     <h3>Post Notice</h3>
     <form method="POST">
         <input type="hidden" name="action" value="post_notice">
