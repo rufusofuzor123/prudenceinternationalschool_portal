@@ -127,6 +127,7 @@ class FeeStructure(db.Model):
     session_id = db.Column(db.Integer, db.ForeignKey("sessions.id"), nullable=True)
     term = db.Column(db.String(20), nullable=False, default="First Term")
     amount = db.Column(db.Float, nullable=False)
+    fee_type = db.Column(db.String(50), nullable=False, default="Tuition")
 
     session = db.relationship("Session", backref="fee_structures")
 
@@ -414,13 +415,21 @@ def logout():
     return redirect(url_for("login"))
 
 
-def get_student_fee(student):
+def get_student_fee_breakdown(student):
     current_session = get_current_session()
-    query = FeeStructure.query.filter_by(class_name=student.assigned_class)
+    current_term = get_current_term()
+    query = FeeStructure.query.filter_by(class_name=student.assigned_class, term=current_term)
     if current_session:
         query = query.filter_by(session_id=current_session.id)
-    fee = query.first()
-    return fee.amount if fee else 50000.0
+    items = query.all()
+    return items
+
+
+def get_student_fee(student):
+    items = get_student_fee_breakdown(student)
+    if not items:
+        return 50000.0
+    return sum(item.amount for item in items)
 
 
 def get_current_session():
@@ -515,6 +524,7 @@ def student_dashboard():
     late_count = sum(1 for a in attendance_records if a.status == "Late")
 
     student_fee = get_student_fee(current_user)
+    fee_breakdown = get_student_fee_breakdown(current_user)
     notices = Notice.query.order_by(Notice.date_posted.desc()).all()
 
     return render_template(
@@ -531,7 +541,8 @@ def student_dashboard():
         present_count=present_count,
         absent_count=absent_count,
         late_count=late_count,
-        student_fee=student_fee
+        student_fee=student_fee,
+        fee_breakdown=fee_breakdown
     )
 
 
@@ -1320,11 +1331,13 @@ def admin_dashboard():
             fs_class_name = request.form.get("fs_class_name")
             fs_amount = request.form.get("fs_amount")
             fs_term = request.form.get("fs_term", "First Term")
+            fs_type = request.form.get("fs_type", "Tuition")
             current_session = get_current_session()
             if fs_class_name and fs_amount:
                 existing = FeeStructure.query.filter_by(
                     class_name=fs_class_name,
                     term=fs_term,
+                    fee_type=fs_type,
                     session_id=current_session.id if current_session else None
                 ).first()
                 if existing:
@@ -1333,11 +1346,12 @@ def admin_dashboard():
                     db.session.add(FeeStructure(
                         class_name=fs_class_name,
                         term=fs_term,
+                        fee_type=fs_type,
                         amount=float(fs_amount),
                         session_id=current_session.id if current_session else None
                     ))
                 db.session.commit()
-                flash("Fee structure saved!", "success")
+                flash(f"{fs_type} fee saved!", "success")
 
         elif action == "add_timetable_entry":
             class_name = request.form.get("tt_class_name")
@@ -1687,6 +1701,11 @@ with app.app_context():
 
     if "grading_scales" not in inspector.get_table_names():
         GradingScale.__table__.create(db.engine)
+
+    fee_structure_columns = [col["name"] for col in inspector.get_columns("fee_structures")]
+    if "fee_type" not in fee_structure_columns:
+        db.session.execute(text("ALTER TABLE fee_structures ADD COLUMN fee_type VARCHAR(50) DEFAULT 'Tuition'"))
+        db.session.commit()
 
     if GradingScale.query.count() == 0:
         db.session.add(GradingScale(grade_letter="A", min_score=70.0))

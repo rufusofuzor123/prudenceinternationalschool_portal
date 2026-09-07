@@ -31,8 +31,19 @@
                 {% else %}
                     <span class="badge badge-danger">OUTSTANDING</span>
                     <div style="margin-top: 15px;">
+                        {% if fee_breakdown %}
+                        <table class="data-table" style="margin-bottom:10px;">
+                            <thead><tr><th>Fee Type</th><th>Amount</th></tr></thead>
+                            <tbody>
+                                {% for item in fee_breakdown %}
+                                <tr><td>{{ item.fee_type }}</td><td>₦{{ "{:,.2f}".format(item.amount) }}</td></tr>
+                                {% endfor %}
+                                <tr><td><strong>Total</strong></td><td><strong>₦{{ "{:,.2f}".format(student_fee) }}</strong></td></tr>
+                            </tbody>
+                        </table>
+                        {% endif %}
                         <form method="POST" action="{{ url_for('initialize_payment') }}">
-                            <label><strong>Term School Fee (NGN):</strong></label>
+                            <label><strong>Total to Pay (NGN):</strong></label>
                             <input type="number" name="amount" value="{{ student_fee }}" class="form-control" style="margin-bottom: 8px;" readonly>
                             <button type="submit" class="btn btn-success">Pay Online (Bank Transfer / Card / USSD)</button>
                         </form>

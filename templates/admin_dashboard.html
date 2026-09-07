@@ -226,6 +226,17 @@
                     <option>Third Term</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label>Fee Type</label>
+                <select name="fs_type" class="form-control">
+                    <option>Tuition</option>
+                    <option>PTA Levy</option>
+                    <option>Exam Fee</option>
+                    <option>Uniform</option>
+                    <option>Books</option>
+                    <option>Other</option>
+                </select>
+            </div>
             <div class="form-group"><label>Amount (NGN)</label><input type="number" name="fs_amount" class="form-control" required></div>
             <button type="submit" class="btn btn-primary">Save Fee</button>
         </form>
@@ -235,12 +246,13 @@
         <h3>Current Fee Structures</h3>
         <div class="table-wrapper">
             <table class="data-table">
-                <thead><tr><th>Class</th><th>Term</th><th>Session</th><th>Amount</th></tr></thead>
+                <thead><tr><th>Class</th><th>Term</th><th>Fee Type</th><th>Session</th><th>Amount</th></tr></thead>
                 <tbody>
                     {% for f in fee_structures %}
                     <tr>
                         <td>{{ f.class_name }}</td>
                         <td>{{ f.term }}</td>
+                        <td>{{ f.fee_type }}</td>
                         <td>{{ f.session.name if f.session else 'N/A' }}</td>
                         <td>₦{{ "{:,.2f}".format(f.amount) }}</td>
                     </tr>
