@@ -1178,7 +1178,7 @@ def admin_dashboard():
                     term_abbr = term_abbr_map.get(current_term, "1ST")
                     session_label = current_session.name.replace("/", "-") if current_session else "PENDING"
                     seq = User.query.filter_by(role="student").count() + 1
-                    admission_number = f"{session_label}-{term_abbr}-{seq:04d}"
+                    admission_number = f"PIS-{session_label}-{term_abbr}-{seq:04d}"
 
                 new_user = User(
                     username=username,
