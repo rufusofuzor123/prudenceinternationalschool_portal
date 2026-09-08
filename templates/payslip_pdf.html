@@ -1,0 +1,49 @@
+<html>
+<head>
+<style>
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #222; }
+    .header-table { width: 100%; border-bottom: 3px solid #003366; padding-bottom: 10px; margin-bottom: 15px; }
+    .school-name { font-size: 20px; font-weight: bold; color: #003366; }
+    .title { text-align: center; font-size: 16px; font-weight: bold; margin: 15px 0; text-decoration: underline; }
+    .info-table { width: 100%; margin-bottom: 15px; }
+    .info-table td { padding: 3px 0; font-size: 12px; }
+    .pay-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .pay-table th { background: #003366; color: white; padding: 6px; border: 1px solid #999; text-align: left; }
+    .pay-table td { padding: 6px; border: 1px solid #999; }
+    .net-row td { font-weight: bold; background: #f0f0f0; }
+    .footer { margin-top: 40px; font-size: 10px; text-align: center; color: #666; }
+</style>
+</head>
+<body>
+
+<table class="header-table">
+    <tr><td><div class="school-name">Prudence International School</div></td></tr>
+</table>
+
+<div class="title">Payslip — {{ record.month }} {{ record.year }}</div>
+
+<table class="info-table">
+    <tr>
+        <td width="50%"><strong>Staff Name:</strong> {{ record.staff.full_name }}</td>
+        <td width="50%"><strong>Role:</strong> {{ record.staff.role|capitalize }}</td>
+    </tr>
+</table>
+
+<table class="pay-table">
+    <tr><th>Description</th><th>Amount (NGN)</th></tr>
+    <tr><td>Basic Salary</td><td>₦{{ "{:,.2f}".format(record.basic_salary) }}</td></tr>
+    <tr><td>Allowances</td><td>₦{{ "{:,.2f}".format(record.allowances) }}</td></tr>
+    <tr><td>Deductions</td><td>-₦{{ "{:,.2f}".format(record.deductions) }}</td></tr>
+    <tr class="net-row"><td>Net Pay</td><td>₦{{ "{:,.2f}".format(record.net_pay) }}</td></tr>
+</table>
+
+{% if record.notes %}
+<p style="margin-top:15px;"><strong>Notes:</strong> {{ record.notes }}</p>
+{% endif %}
+
+<div class="footer">
+    This is a computer-generated payslip from Prudence International School Portal. Tax and statutory deductions are the school's responsibility to calculate correctly.
+</div>
+
+</body>
+</html>

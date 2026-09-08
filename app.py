@@ -252,6 +252,22 @@ class GradingScale(db.Model):
     min_score = db.Column(db.Float, nullable=False)
 
 
+class SalaryRecord(db.Model):
+    __tablename__ = "salary_records"
+    id = db.Column(db.Integer, primary_key=True)
+    staff_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    month = db.Column(db.String(20), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    basic_salary = db.Column(db.Float, nullable=False, default=0)
+    allowances = db.Column(db.Float, nullable=False, default=0)
+    deductions = db.Column(db.Float, nullable=False, default=0)
+    net_pay = db.Column(db.Float, nullable=False, default=0)
+    notes = db.Column(db.Text, nullable=True)
+    date_generated = db.Column(db.DateTime, nullable=False)
+
+    staff = db.relationship("User", backref="salary_records")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -1479,6 +1495,63 @@ def admin_dashboard():
         chart_data=chart_data,
         grading_scales=grading_scales
     )
+@app.route("/admin/payroll", methods=["GET", "POST"])
+@login_required
+def admin_payroll():
+    if current_user.role != "admin":
+        abort(403)
+
+    staff_members = User.query.filter(User.role.in_(["teacher", "admin"])).all()
+
+    if request.method == "POST":
+        staff_id = request.form.get("staff_id")
+        month = request.form.get("month")
+        year = request.form.get("year")
+        basic_salary = float(request.form.get("basic_salary", 0) or 0)
+        allowances = float(request.form.get("allowances", 0) or 0)
+        deductions = float(request.form.get("deductions", 0) or 0)
+        notes = request.form.get("notes", "")
+        net_pay = basic_salary + allowances - deductions
+
+        from datetime import datetime as dt
+        db.session.add(SalaryRecord(
+            staff_id=int(staff_id),
+            month=month,
+            year=int(year),
+            basic_salary=basic_salary,
+            allowances=allowances,
+            deductions=deductions,
+            net_pay=net_pay,
+            notes=notes,
+            date_generated=dt.utcnow()
+        ))
+        db.session.commit()
+        flash("Salary record saved!", "success")
+        return redirect(url_for("admin_payroll"))
+
+    records = SalaryRecord.query.order_by(SalaryRecord.date_generated.desc()).all()
+    return render_template("admin_payroll.html", staff_members=staff_members, records=records)
+
+
+@app.route("/admin/payslip/<int:record_id>/pdf")
+@login_required
+def download_payslip(record_id):
+    if current_user.role != "admin":
+        abort(403)
+    record = db.session.get(SalaryRecord, record_id)
+    if not record:
+        abort(404)
+
+    html = render_template("payslip_pdf.html", record=record)
+    pdf_buffer = io.BytesIO()
+    pisa.CreatePDF(html, dest=pdf_buffer)
+    pdf_buffer.seek(0)
+
+    response = Response(pdf_buffer.read(), mimetype="application/pdf")
+    response.headers["Content-Disposition"] = f"attachment; filename=payslip_{record.staff.username}_{record.month}_{record.year}.pdf"
+    return response
+
+
 @app.route("/admin/staff-records")
 @login_required
 def staff_records():
@@ -1748,6 +1821,9 @@ with app.app_context():
     if "fee_type" not in fee_structure_columns:
         db.session.execute(text("ALTER TABLE fee_structures ADD COLUMN fee_type VARCHAR(50) DEFAULT 'Tuition'"))
         db.session.commit()
+
+    if "salary_records" not in inspector.get_table_names():
+        SalaryRecord.__table__.create(db.engine)
 
     if GradingScale.query.count() == 0:
         db.session.add(GradingScale(grade_letter="A", min_score=70.0))
