@@ -462,6 +462,14 @@ def get_student_fee(student):
     return sum(item.amount for item in items)
 
 
+def get_student_total_paid(student):
+    current_session = get_current_session()
+    query = Payment.query.filter_by(student_id=student.id)
+    if current_session:
+        query = query.filter_by(session_id=current_session.id)
+    return sum(p.amount for p in query.all())
+
+
 def get_current_session():
     return Session.query.filter_by(is_current=True).first()
 
@@ -555,6 +563,8 @@ def student_dashboard():
 
     student_fee = get_student_fee(current_user)
     fee_breakdown = get_student_fee_breakdown(current_user)
+    total_paid = get_student_total_paid(current_user)
+    fee_balance = max(student_fee - total_paid, 0)
     notices = Notice.query.order_by(Notice.date_posted.desc()).all()
 
     return render_template(
@@ -572,7 +582,9 @@ def student_dashboard():
         absent_count=absent_count,
         late_count=late_count,
         student_fee=student_fee,
-        fee_breakdown=fee_breakdown
+        fee_breakdown=fee_breakdown,
+        total_paid=total_paid,
+        fee_balance=fee_balance
     )
 
 
@@ -644,7 +656,22 @@ def initialize_payment():
     if current_user.role != "student":
         abort(403)
 
-    amount_in_naira = get_student_fee(current_user)
+    total_fee = get_student_fee(current_user)
+    total_paid = get_student_total_paid(current_user)
+    balance = max(total_fee - total_paid, 0)
+
+    requested_amount = request.form.get("amount")
+    try:
+        amount_in_naira = float(requested_amount) if requested_amount else balance
+    except ValueError:
+        amount_in_naira = balance
+
+    if amount_in_naira <= 0:
+        flash("No outstanding balance to pay.", "danger")
+        return redirect(url_for("student_dashboard"))
+    if amount_in_naira > balance:
+        amount_in_naira = balance
+
     amount_in_kobo = int(amount_in_naira * 100)
     student_email = current_user.email or f"{current_user.username}@prudence.edu.ng"
 
@@ -694,7 +721,6 @@ def verify_payment():
         res_data = response.json()
 
         if res_data.get("status") and res_data["data"]["status"] == "success":
-            current_user.fee_paid = True
             from datetime import datetime
             current_session = get_current_session()
             paid_amount = res_data["data"]["amount"] / 100
@@ -707,8 +733,17 @@ def verify_payment():
                     reference=reference,
                     date_paid=datetime.utcnow()
                 ))
-            db.session.commit()
-            flash("Online payment verified successfully! Your term clearance is now active.", "success")
+                db.session.commit()
+
+            total_fee = get_student_fee(current_user)
+            total_paid = get_student_total_paid(current_user)
+            if total_paid >= total_fee - 0.01:
+                current_user.fee_paid = True
+                db.session.commit()
+                flash(f"Payment verified! You have fully cleared your fees for this term.", "success")
+            else:
+                remaining = total_fee - total_paid
+                flash(f"Payment of ₦{paid_amount:,.2f} verified! Remaining balance: ₦{remaining:,.2f}", "success")
         else:
             flash("Payment verification failed or was declined.", "danger")
     except Exception:

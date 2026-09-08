@@ -42,9 +42,10 @@
                             </tbody>
                         </table>
                         {% endif %}
+                        <p><strong>Amount Paid So Far:</strong> ₦{{ "{:,.2f}".format(total_paid) }} &nbsp; <strong>Balance:</strong> ₦{{ "{:,.2f}".format(fee_balance) }}</p>
                         <form method="POST" action="{{ url_for('initialize_payment') }}">
-                            <label><strong>Total to Pay (NGN):</strong></label>
-                            <input type="number" name="amount" value="{{ student_fee }}" class="form-control" style="margin-bottom: 8px;" readonly>
+                            <label><strong>Amount to Pay Now (NGN) — full balance or part payment:</strong></label>
+                            <input type="number" name="amount" value="{{ fee_balance }}" max="{{ fee_balance }}" min="1" step="0.01" class="form-control" style="margin-bottom: 8px;">
                             <button type="submit" class="btn btn-success">Pay Online (Bank Transfer / Card / USSD)</button>
                         </form>
                     </div>
