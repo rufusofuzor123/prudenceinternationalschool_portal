@@ -3,6 +3,16 @@
 <h2>Admin Control Panel</h2>
 
 <div class="card no-print" style="margin-bottom:20px;">
+    <h3>Financial Summary</h3>
+    <div class="dashboard-grid">
+        <div><strong>Total Income:</strong><br>₦{{ "{:,.2f}".format(total_income) }}</div>
+        <div><strong>Total Expenditure:</strong><br>₦{{ "{:,.2f}".format(total_expenditure) }}</div>
+        <div><strong>Net Balance:</strong><br><span style="color:{{ 'green' if net_balance >= 0 else 'red' }};">₦{{ "{:,.2f}".format(net_balance) }}</span></div>
+    </div>
+    <div style="margin-top:20px;"><canvas id="financeChart"></canvas></div>
+</div>
+
+<div class="card no-print" style="margin-bottom:20px;">
     <h3>Analytics Overview</h3>
     <div class="dashboard-grid">
         <div><canvas id="feeChart"></canvas></div>
@@ -471,6 +481,15 @@
             datasets: [{ label: 'Attendance Rate (%)', data: chartData.attendance_rates, backgroundColor: '#28a745' }]
         },
         options: { plugins: { title: { display: true, text: 'Attendance Rate by Class' } } }
+    });
+
+    new Chart(document.getElementById('financeChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.finance_labels,
+            datasets: [{ label: 'Amount (NGN)', data: chartData.finance_values, backgroundColor: ['#28a745', '#dc3545', '#ffc107'] }]
+        },
+        options: { plugins: { title: { display: true, text: 'Income vs Expenditure' } } }
     });
 </script>
 {% endblock %}

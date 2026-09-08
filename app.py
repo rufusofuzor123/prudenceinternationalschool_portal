@@ -1481,12 +1481,20 @@ def admin_dashboard():
         rate = round((present / len(class_attendance)) * 100, 1) if class_attendance else 0
         attendance_rates.append(rate)
 
+    total_income = sum(p.amount for p in Payment.query.all())
+    total_salaries = sum(s.net_pay for s in SalaryRecord.query.all())
+    total_other_expenses = sum(e.amount for e in Expense.query.all())
+    total_expenditure = total_salaries + total_other_expenses
+    net_balance = total_income - total_expenditure
+
     chart_data = json.dumps({
         "fee_labels": ["Paid", "Unpaid"],
         "fee_values": [paid_count, unpaid_count],
         "class_labels": class_names,
         "avg_scores": avg_scores,
-        "attendance_rates": attendance_rates
+        "attendance_rates": attendance_rates,
+        "finance_labels": ["Income", "Salaries", "Other Expenses"],
+        "finance_values": [total_income, total_salaries, total_other_expenses]
     })
 
     grading_scales = GradingScale.query.order_by(GradingScale.min_score.desc()).all()
@@ -1505,7 +1513,10 @@ def admin_dashboard():
         results_published=published,
         current_term=current_term,
         chart_data=chart_data,
-        grading_scales=grading_scales
+        grading_scales=grading_scales,
+        total_income=total_income,
+        total_expenditure=total_expenditure,
+        net_balance=net_balance
     )
 @app.route("/admin/payroll", methods=["GET", "POST"])
 @login_required
