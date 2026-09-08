@@ -268,6 +268,18 @@ class SalaryRecord(db.Model):
     staff = db.relationship("User", backref="salary_records")
 
 
+class Expense(db.Model):
+    __tablename__ = "expenses"
+    id = db.Column(db.Integer, primary_key=True)
+    vendor_name = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(50), nullable=False, default="General")
+    description = db.Column(db.Text, nullable=True)
+    amount = db.Column(db.Float, nullable=False)
+    invoice_reference = db.Column(db.String(100), nullable=True)
+    expense_date = db.Column(db.Date, nullable=False)
+    date_logged = db.Column(db.DateTime, nullable=False)
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -1552,6 +1564,41 @@ def download_payslip(record_id):
     return response
 
 
+@app.route("/admin/expenses", methods=["GET", "POST"])
+@login_required
+def admin_expenses():
+    if current_user.role != "admin":
+        abort(403)
+
+    if request.method == "POST":
+        vendor_name = request.form.get("vendor_name")
+        category = request.form.get("category", "General")
+        description = request.form.get("description")
+        amount = float(request.form.get("amount", 0) or 0)
+        invoice_reference = request.form.get("invoice_reference")
+        expense_date_str = request.form.get("expense_date")
+
+        from datetime import datetime as dt
+        expense_date = dt.strptime(expense_date_str, "%Y-%m-%d").date() if expense_date_str else dt.utcnow().date()
+
+        db.session.add(Expense(
+            vendor_name=vendor_name,
+            category=category,
+            description=description,
+            amount=amount,
+            invoice_reference=invoice_reference,
+            expense_date=expense_date,
+            date_logged=dt.utcnow()
+        ))
+        db.session.commit()
+        flash("Expense logged!", "success")
+        return redirect(url_for("admin_expenses"))
+
+    expenses = Expense.query.order_by(Expense.expense_date.desc()).all()
+    total_expenses = sum(e.amount for e in expenses)
+    return render_template("admin_expenses.html", expenses=expenses, total_expenses=total_expenses)
+
+
 @app.route("/admin/staff-records")
 @login_required
 def staff_records():
@@ -1824,6 +1871,9 @@ with app.app_context():
 
     if "salary_records" not in inspector.get_table_names():
         SalaryRecord.__table__.create(db.engine)
+
+    if "expenses" not in inspector.get_table_names():
+        Expense.__table__.create(db.engine)
 
     if GradingScale.query.count() == 0:
         db.session.add(GradingScale(grade_letter="A", min_score=70.0))
