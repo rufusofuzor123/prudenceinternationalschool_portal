@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Bank Details — {{ staff.full_name }}</h2>
+
+<div class="card" style="margin-bottom:20px;">
+    <form method="POST">
+        <div class="form-group">
+            <label>Bank</label>
+            <select name="bank_code" class="form-control" required>
+                <option value="044" {% if staff.bank_code == '044' %}selected{% endif %}>Access Bank</option>
+                <option value="023" {% if staff.bank_code == '023' %}selected{% endif %}>Citibank Nigeria</option>
+                <option value="050" {% if staff.bank_code == '050' %}selected{% endif %}>Ecobank Nigeria</option>
+                <option value="070" {% if staff.bank_code == '070' %}selected{% endif %}>Fidelity Bank</option>
+                <option value="011" {% if staff.bank_code == '011' %}selected{% endif %}>First Bank of Nigeria</option>
+                <option value="214" {% if staff.bank_code == '214' %}selected{% endif %}>First City Monument Bank</option>
+                <option value="058" {% if staff.bank_code == '058' %}selected{% endif %}>Guaranty Trust Bank</option>
+                <option value="030" {% if staff.bank_code == '030' %}selected{% endif %}>Heritage Bank</option>
+                <option value="301" {% if staff.bank_code == '301' %}selected{% endif %}>Jaiz Bank</option>
+                <option value="082" {% if staff.bank_code == '082' %}selected{% endif %}>Keystone Bank</option>
+                <option value="076" {% if staff.bank_code == '076' %}selected{% endif %}>Polaris Bank</option>
+                <option value="221" {% if staff.bank_code == '221' %}selected{% endif %}>Stanbic IBTC Bank</option>
+                <option value="068" {% if staff.bank_code == '068' %}selected{% endif %}>Standard Chartered Bank</option>
+                <option value="232" {% if staff.bank_code == '232' %}selected{% endif %}>Sterling Bank</option>
+                <option value="032" {% if staff.bank_code == '032' %}selected{% endif %}>Union Bank of Nigeria</option>
+                <option value="033" {% if staff.bank_code == '033' %}selected{% endif %}>United Bank For Africa</option>
+                <option value="215" {% if staff.bank_code == '215' %}selected{% endif %}>Unity Bank</option>
+                <option value="035" {% if staff.bank_code == '035' %}selected{% endif %}>Wema Bank</option>
+                <option value="057" {% if staff.bank_code == '057' %}selected{% endif %}>Zenith Bank</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Account Number</label><input type="text" name="bank_account_number" value="{{ staff.bank_account_number or '' }}" class="form-control" required></div>
+        <button type="submit" class="btn btn-primary">Save Bank Details</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Verification Status</h3>
+    {% if staff.bank_account_name %}
+    <p><span class="badge badge-success">VERIFIED</span> Account Name: <strong>{{ staff.bank_account_name }}</strong></p>
+    {% else %}
+    <p><span class="badge badge-danger">NOT VERIFIED</span> Save bank details above, then verify below before any payout can be made.</p>
+    {% endif %}
+    {% if staff.bank_code and staff.bank_account_number %}
+    <form method="POST" action="{{ url_for('verify_staff_account', staff_id=staff.id) }}">
+        <button type="submit" class="btn btn-secondary">Verify Account with Paystack</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Confirm Salary Payout</h2>
+
+<div class="card" style="border:3px solid #dc3545; max-width:500px;">
+    <h3 style="color:#dc3545;">Please confirm carefully — this cannot be undone</h3>
+    <table style="width:100%; margin-top:15px;">
+        <tr><td><strong>Staff Name:</strong></td><td>{{ staff.full_name }}</td></tr>
+        <tr><td><strong>Verified Bank Account Name:</strong></td><td><strong>{{ staff.bank_account_name }}</strong></td></tr>
+        <tr><td><strong>Bank:</strong></td><td>{{ staff.bank_name or staff.bank_code }}</td></tr>
+        <tr><td><strong>Account Number:</strong></td><td>{{ staff.bank_account_number }}</td></tr>
+        <tr><td><strong>Pay Period:</strong></td><td>{{ record.month }} {{ record.year }}</td></tr>
+        <tr><td><strong>Amount to Send:</strong></td><td><strong style="font-size:18px;">₦{{ "{:,.2f}".format(record.net_pay) }}</strong></td></tr>
+    </table>
+
+    <p style="margin-top:15px; color:#721c24; background:#f8d7da; padding:10px; border-radius:6px;">
+        Double-check the name above matches {{ staff.full_name }} before proceeding. If the bank account belongs to someone else, cancel and re-verify.
+    </p>
+
+    <form method="POST" onsubmit="return confirm('Send ₦{{ "{:,.2f}".format(record.net_pay) }} to {{ staff.bank_account_name }} now? This cannot be undone.');">
+        <button type="submit" class="btn btn-danger" style="margin-top:10px;">Confirm and Send Payment</button>
+    </form>
+    <a href="{{ url_for('admin_payroll') }}" class="btn btn-secondary" style="margin-top:10px; display:inline-block;">Cancel</a>
+</div>
+{% endblock %}

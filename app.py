@@ -70,6 +70,11 @@ class User(UserMixin, db.Model):
     hire_date = db.Column(db.Date, nullable=True)
     staff_phone = db.Column(db.String(20), nullable=True)
     admission_number = db.Column(db.String(50), nullable=True)
+    bank_name = db.Column(db.String(100), nullable=True)
+    bank_code = db.Column(db.String(10), nullable=True)
+    bank_account_number = db.Column(db.String(20), nullable=True)
+    bank_account_name = db.Column(db.String(150), nullable=True)
+    paystack_recipient_code = db.Column(db.String(100), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -264,6 +269,8 @@ class SalaryRecord(db.Model):
     net_pay = db.Column(db.Float, nullable=False, default=0)
     notes = db.Column(db.Text, nullable=True)
     date_generated = db.Column(db.DateTime, nullable=False)
+    transfer_status = db.Column(db.String(20), nullable=True, default="Not Sent")
+    transfer_reference = db.Column(db.String(100), nullable=True)
 
     staff = db.relationship("User", backref="salary_records")
 
@@ -1707,6 +1714,118 @@ def admin_payroll():
     return render_template("admin_payroll.html", staff_members=staff_members, records=records)
 
 
+@app.route("/admin/staff/<int:staff_id>/bank-details", methods=["GET", "POST"])
+@login_required
+def staff_bank_details(staff_id):
+    if current_user.role != "admin":
+        abort(403)
+    staff = db.session.get(User, staff_id)
+    if not staff:
+        abort(404)
+
+    if request.method == "POST":
+        staff.bank_name = request.form.get("bank_name")
+        staff.bank_code = request.form.get("bank_code")
+        staff.bank_account_number = request.form.get("bank_account_number")
+        staff.bank_account_name = None
+        staff.paystack_recipient_code = None
+        db.session.commit()
+        flash("Bank details saved. Please verify the account before paying.", "success")
+        return redirect(url_for("staff_bank_details", staff_id=staff.id))
+
+    return render_template("staff_bank_details.html", staff=staff)
+
+
+@app.route("/admin/staff/<int:staff_id>/verify-account", methods=["POST"])
+@login_required
+def verify_staff_account(staff_id):
+    if current_user.role != "admin":
+        abort(403)
+    staff = db.session.get(User, staff_id)
+    if not staff or not staff.bank_code or not staff.bank_account_number:
+        flash("Bank name/code and account number are required first.", "danger")
+        return redirect(url_for("staff_bank_details", staff_id=staff_id))
+
+    headers = {"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"}
+    try:
+        response = requests.get(
+            f"https://api.paystack.co/bank/resolve?account_number={staff.bank_account_number}&bank_code={staff.bank_code}",
+            headers=headers, timeout=15
+        )
+        res_data = response.json()
+        if res_data.get("status"):
+            staff.bank_account_name = res_data["data"]["account_name"]
+            db.session.commit()
+            flash(f"Account verified: {staff.bank_account_name}", "success")
+        else:
+            flash(f"Verification failed: {res_data.get('message', 'Unknown error')}", "danger")
+    except Exception as e:
+        flash(f"Could not verify account: {str(e)}", "danger")
+
+    return redirect(url_for("staff_bank_details", staff_id=staff_id))
+
+
+@app.route("/admin/payslip/<int:record_id>/pay", methods=["GET", "POST"])
+@login_required
+def initiate_salary_payout(record_id):
+    if current_user.role != "admin":
+        abort(403)
+    record = db.session.get(SalaryRecord, record_id)
+    if not record:
+        abort(404)
+    staff = record.staff
+
+    if not staff.bank_account_name:
+        flash("This staff member's bank account has not been verified yet.", "danger")
+        return redirect(url_for("staff_bank_details", staff_id=staff.id))
+
+    if request.method == "POST":
+        headers = {"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}", "Content-Type": "application/json"}
+        try:
+            if not staff.paystack_recipient_code:
+                recipient_payload = {
+                    "type": "nuban",
+                    "name": staff.bank_account_name,
+                    "account_number": staff.bank_account_number,
+                    "bank_code": staff.bank_code,
+                    "currency": "NGN"
+                }
+                r = requests.post("https://api.paystack.co/transferrecipient", json=recipient_payload, headers=headers, timeout=15)
+                r_data = r.json()
+                if not r_data.get("status"):
+                    flash(f"Could not create transfer recipient: {r_data.get('message', 'Unknown error')}", "danger")
+                    return redirect(url_for("admin_payroll"))
+                staff.paystack_recipient_code = r_data["data"]["recipient_code"]
+                db.session.commit()
+
+            import uuid
+            transfer_ref = str(uuid.uuid4())
+            transfer_payload = {
+                "source": "balance",
+                "amount": int(record.net_pay * 100),
+                "recipient": staff.paystack_recipient_code,
+                "reason": f"Salary - {record.month} {record.year}",
+                "reference": transfer_ref
+            }
+            t = requests.post("https://api.paystack.co/transfer", json=transfer_payload, headers=headers, timeout=15)
+            t_data = t.json()
+            if t_data.get("status"):
+                record.transfer_status = t_data["data"].get("status", "pending")
+                record.transfer_reference = transfer_ref
+                db.session.commit()
+                flash(f"Transfer initiated! Status: {record.transfer_status}", "success")
+            else:
+                record.transfer_status = "Failed"
+                db.session.commit()
+                flash(f"Transfer failed: {t_data.get('message', 'Unknown error')}", "danger")
+        except Exception as e:
+            flash(f"Transfer error: {str(e)}", "danger")
+
+        return redirect(url_for("admin_payroll"))
+
+    return render_template("confirm_payout.html", record=record, staff=staff)
+
+
 @app.route("/admin/payslip/<int:record_id>/pdf")
 @login_required
 def download_payslip(record_id):
@@ -2036,6 +2155,17 @@ with app.app_context():
         db.session.execute(text("ALTER TABLE users ADD COLUMN admission_number VARCHAR(50)"))
         db.session.commit()
 
+    for col_name, col_type in [
+        ("bank_name", "VARCHAR(100)"),
+        ("bank_code", "VARCHAR(10)"),
+        ("bank_account_number", "VARCHAR(20)"),
+        ("bank_account_name", "VARCHAR(150)"),
+        ("paystack_recipient_code", "VARCHAR(100)")
+    ]:
+        if col_name not in user_columns_2:
+            db.session.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+            db.session.commit()
+
     if "grading_scales" not in inspector.get_table_names():
         GradingScale.__table__.create(db.engine)
 
@@ -2046,6 +2176,14 @@ with app.app_context():
 
     if "salary_records" not in inspector.get_table_names():
         SalaryRecord.__table__.create(db.engine)
+    else:
+        salary_columns = [col["name"] for col in inspector.get_columns("salary_records")]
+        if "transfer_status" not in salary_columns:
+            db.session.execute(text("ALTER TABLE salary_records ADD COLUMN transfer_status VARCHAR(20) DEFAULT 'Not Sent'"))
+            db.session.commit()
+        if "transfer_reference" not in salary_columns:
+            db.session.execute(text("ALTER TABLE salary_records ADD COLUMN transfer_reference VARCHAR(100)"))
+            db.session.commit()
 
     if "expenses" not in inspector.get_table_names():
         Expense.__table__.create(db.engine)

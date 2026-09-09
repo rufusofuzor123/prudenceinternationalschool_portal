@@ -4,6 +4,25 @@
 <p style="font-size:13px; color:#666;">Enter net pay after your own tax/deduction calculations — this portal does not calculate tax or send money automatically.</p>
 
 <div class="card no-print" style="margin-bottom:20px;">
+    <h3>Staff Bank Details</h3>
+    <p style="font-size:13px; color:#666;">Set up and verify bank accounts before any payout can be sent.</p>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Staff</th><th>Verification</th><th></th></tr></thead>
+            <tbody>
+                {% for s in staff_members %}
+                <tr>
+                    <td>{{ s.full_name }}</td>
+                    <td>{% if s.bank_account_name %}<span class="badge badge-success">VERIFIED</span> {{ s.bank_account_name }}{% else %}<span class="badge badge-danger">NOT SET UP</span>{% endif %}</td>
+                    <td><a href="{{ url_for('staff_bank_details', staff_id=s.id) }}" class="btn btn-secondary btn-sm">Manage Bank Details</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card no-print" style="margin-bottom:20px;">
     <h3>Add Salary Record</h3>
     <form method="POST">
         <div class="form-group">
@@ -36,17 +55,23 @@
     <h3>All Salary Records</h3>
     <div class="table-wrapper">
         <table class="data-table">
-            <thead><tr><th>Staff</th><th>Month/Year</th><th>Net Pay</th><th></th></tr></thead>
+            <thead><tr><th>Staff</th><th>Month/Year</th><th>Net Pay</th><th>Payout Status</th><th></th></tr></thead>
             <tbody>
                 {% for r in records %}
                 <tr>
                     <td>{{ r.staff.full_name }}</td>
                     <td>{{ r.month }} {{ r.year }}</td>
                     <td>₦{{ "{:,.2f}".format(r.net_pay) }}</td>
-                    <td><a href="{{ url_for('download_payslip', record_id=r.id) }}" class="btn btn-primary btn-sm">Download Payslip</a></td>
+                    <td>{{ r.transfer_status or 'Not Sent' }}</td>
+                    <td>
+                        <a href="{{ url_for('download_payslip', record_id=r.id) }}" class="btn btn-primary btn-sm">Payslip</a>
+                        {% if r.transfer_status in [None, 'Not Sent', 'Failed'] %}
+                        <a href="{{ url_for('initiate_salary_payout', record_id=r.id) }}" class="btn btn-danger btn-sm">Pay via Transfer</a>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4">No salary records yet.</td></tr>
+                <tr><td colspan="5">No salary records yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
