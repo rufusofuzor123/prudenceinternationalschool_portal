@@ -311,6 +311,17 @@ class PortalMessage(db.Model):
     recipient = db.relationship("User", foreign_keys=[recipient_id], backref="received_messages")
 
 
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    action = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, nullable=False)
+
+    actor = db.relationship("User", backref="audit_logs")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -353,6 +364,13 @@ def is_results_published() -> bool:
 def get_current_term() -> str:
     setting = SystemSetting.query.filter_by(key="current_term").first()
     return setting.value if setting else "First Term"
+
+
+def log_audit(action, details=""):
+    from datetime import datetime as dt
+    actor_id = current_user.id if current_user.is_authenticated else None
+    db.session.add(AuditLog(actor_id=actor_id, action=action, details=details, timestamp=dt.utcnow()))
+    db.session.commit()
 
 
 def redirect_role_dashboard(role: str):
@@ -842,6 +860,7 @@ def verify_payment():
                     date_paid=datetime.utcnow()
                 ))
                 db.session.commit()
+                log_audit("Fee Payment Received", f"{current_user.full_name} paid ₦{paid_amount:,.2f} (ref: {reference})")
 
             total_fee = get_student_fee(current_user)
             total_paid = get_student_total_paid(current_user)
@@ -1707,6 +1726,8 @@ def admin_payroll():
             date_generated=dt.utcnow()
         ))
         db.session.commit()
+        staff_member = db.session.get(User, int(staff_id))
+        log_audit("Salary Record Created", f"{staff_member.full_name} - {month} {year} - Net Pay ₦{net_pay:,.2f}")
         flash("Salary record saved!", "success")
         return redirect(url_for("admin_payroll"))
 
@@ -1813,6 +1834,7 @@ def initiate_salary_payout(record_id):
                 record.transfer_status = t_data["data"].get("status", "pending")
                 record.transfer_reference = transfer_ref
                 db.session.commit()
+                log_audit("Salary Payout Sent", f"{staff.full_name} - ₦{record.net_pay:,.2f} - Status: {record.transfer_status}")
                 flash(f"Transfer initiated! Status: {record.transfer_status}", "success")
             else:
                 record.transfer_status = "Failed"
@@ -1872,12 +1894,132 @@ def admin_expenses():
             date_logged=dt.utcnow()
         ))
         db.session.commit()
+        log_audit("Expense Logged", f"{vendor_name} - {category} - ₦{amount:,.2f}")
         flash("Expense logged!", "success")
         return redirect(url_for("admin_expenses"))
 
     expenses = Expense.query.order_by(Expense.expense_date.desc()).all()
     total_expenses = sum(e.amount for e in expenses)
     return render_template("admin_expenses.html", expenses=expenses, total_expenses=total_expenses)
+
+
+@app.route("/admin/revenue-projections")
+@login_required
+def revenue_projections():
+    if current_user.role != "admin":
+        abort(403)
+
+    current_session = get_current_session()
+    current_term = get_current_term()
+    classes = SchoolClass.query.all()
+    projections = []
+    total_expected = 0
+    total_collected = 0
+
+    for c in classes:
+        class_students = User.query.filter_by(role="student", assigned_class=c.name).all()
+        fee_filter = {"class_name": c.name, "term": current_term}
+        if current_session:
+            fee_filter["session_id"] = current_session.id
+        fee_items = FeeStructure.query.filter_by(**fee_filter).all()
+        fee_per_student = sum(f.amount for f in fee_items)
+        expected = fee_per_student * len(class_students)
+
+        collected = 0
+        for s in class_students:
+            collected += get_student_total_paid(s)
+
+        projections.append({
+            "class_name": c.name,
+            "student_count": len(class_students),
+            "fee_per_student": fee_per_student,
+            "expected": expected,
+            "collected": collected,
+            "shortfall": max(expected - collected, 0)
+        })
+        total_expected += expected
+        total_collected += collected
+
+    return render_template(
+        "revenue_projections.html",
+        projections=projections,
+        total_expected=total_expected,
+        total_collected=total_collected,
+        total_shortfall=max(total_expected - total_collected, 0)
+    )
+
+
+@app.route("/admin/financial-statement/pdf")
+@login_required
+def financial_statement_pdf():
+    if current_user.role != "admin":
+        abort(403)
+
+    total_income = sum(p.amount for p in Payment.query.all())
+    total_salaries = sum(s.net_pay for s in SalaryRecord.query.all())
+
+    expense_by_category = {}
+    for e in Expense.query.all():
+        expense_by_category[e.category] = expense_by_category.get(e.category, 0) + e.amount
+    total_other_expenses = sum(expense_by_category.values())
+
+    total_expenditure = total_salaries + total_other_expenses
+    net_balance = total_income - total_expenditure
+    current_session = get_current_session()
+
+    html = render_template(
+        "financial_statement_pdf.html",
+        total_income=total_income,
+        total_salaries=total_salaries,
+        expense_by_category=expense_by_category,
+        total_other_expenses=total_other_expenses,
+        total_expenditure=total_expenditure,
+        net_balance=net_balance,
+        session=current_session
+    )
+
+    pdf_buffer = io.BytesIO()
+    pisa.CreatePDF(html, dest=pdf_buffer)
+    pdf_buffer.seek(0)
+
+    response = Response(pdf_buffer.read(), mimetype="application/pdf")
+    response.headers["Content-Disposition"] = "attachment; filename=financial_statement.pdf"
+    return response
+
+
+@app.route("/admin/audit-trail")
+@login_required
+def audit_trail():
+    if current_user.role != "admin":
+        abort(403)
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(200).all()
+    return render_template("audit_trail.html", logs=logs)
+
+
+@app.route("/admin/outstanding-fees")
+@login_required
+def outstanding_fees():
+    if current_user.role != "admin":
+        abort(403)
+
+    students = User.query.filter_by(role="student").all()
+    report = []
+    total_outstanding = 0
+    for s in students:
+        total_fee = get_student_fee(s)
+        total_paid = get_student_total_paid(s)
+        balance = max(total_fee - total_paid, 0)
+        if balance > 0:
+            report.append({
+                "student": s,
+                "total_fee": total_fee,
+                "total_paid": total_paid,
+                "balance": balance
+            })
+            total_outstanding += balance
+
+    report.sort(key=lambda x: x["balance"], reverse=True)
+    return render_template("outstanding_fees.html", report=report, total_outstanding=total_outstanding)
 
 
 @app.route("/admin/staff-records")
@@ -2193,6 +2335,9 @@ with app.app_context():
 
     if "portal_messages" not in inspector.get_table_names():
         PortalMessage.__table__.create(db.engine)
+
+    if "audit_logs" not in inspector.get_table_names():
+        AuditLog.__table__.create(db.engine)
 
     if GradingScale.query.count() == 0:
         db.session.add(GradingScale(grade_letter="A", min_score=70.0))

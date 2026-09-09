@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Revenue Projections — Current Term</h2>
+
+<p>
+    <strong>Total Expected:</strong> ₦{{ "{:,.2f}".format(total_expected) }} &nbsp;
+    <strong>Total Collected:</strong> ₦{{ "{:,.2f}".format(total_collected) }} &nbsp;
+    <strong>Projected Shortfall:</strong> ₦{{ "{:,.2f}".format(total_shortfall) }}
+</p>
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead><tr><th>Class</th><th>Students</th><th>Fee/Student</th><th>Expected</th><th>Collected</th><th>Shortfall</th></tr></thead>
+        <tbody>
+            {% for p in projections %}
+            <tr>
+                <td>{{ p.class_name }}</td>
+                <td>{{ p.student_count }}</td>
+                <td>₦{{ "{:,.2f}".format(p.fee_per_student) }}</td>
+                <td>₦{{ "{:,.2f}".format(p.expected) }}</td>
+                <td>₦{{ "{:,.2f}".format(p.collected) }}</td>
+                <td>₦{{ "{:,.2f}".format(p.shortfall) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6">No classes set up yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

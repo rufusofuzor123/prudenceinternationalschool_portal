@@ -1,0 +1,43 @@
+<html>
+<head>
+<style>
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #222; }
+    .header-table { width: 100%; border-bottom: 3px solid #003366; padding-bottom: 10px; margin-bottom: 15px; }
+    .school-name { font-size: 20px; font-weight: bold; color: #003366; }
+    .title { text-align: center; font-size: 16px; font-weight: bold; margin: 15px 0; text-decoration: underline; }
+    .statement-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .statement-table th { background: #003366; color: white; padding: 6px; border: 1px solid #999; text-align: left; }
+    .statement-table td { padding: 6px; border: 1px solid #999; }
+    .section-header td { background: #f0f0f0; font-weight: bold; }
+    .net-row td { font-weight: bold; background: #d4edda; }
+    .footer { margin-top: 40px; font-size: 10px; text-align: center; color: #666; }
+</style>
+</head>
+<body>
+
+<table class="header-table">
+    <tr><td><div class="school-name">Prudence International School</div></td></tr>
+</table>
+
+<div class="title">Financial Statement — {{ session.name if session else 'All Time' }}</div>
+
+<table class="statement-table">
+    <tr class="section-header"><td colspan="2">Income</td></tr>
+    <tr><td>Total Fee Payments Received</td><td>₦{{ "{:,.2f}".format(total_income) }}</td></tr>
+
+    <tr class="section-header"><td colspan="2">Expenditure</td></tr>
+    <tr><td>Staff Salaries</td><td>₦{{ "{:,.2f}".format(total_salaries) }}</td></tr>
+    {% for category, amount in expense_by_category.items() %}
+    <tr><td>{{ category }}</td><td>₦{{ "{:,.2f}".format(amount) }}</td></tr>
+    {% endfor %}
+    <tr><td><strong>Total Expenditure</strong></td><td><strong>₦{{ "{:,.2f}".format(total_expenditure) }}</strong></td></tr>
+
+    <tr class="net-row"><td>Net Balance</td><td>₦{{ "{:,.2f}".format(net_balance) }}</td></tr>
+</table>
+
+<div class="footer">
+    This is a computer-generated financial statement from Prudence International School Portal.
+</div>
+
+</body>
+</html>
