@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ msg.subject }}</h2>
+
+<div class="card">
+    <p><strong>From:</strong> {{ msg.sender.full_name }}</p>
+    <p><strong>To:</strong> {{ msg.recipient.full_name }}</p>
+    <p><strong>Date:</strong> {{ msg.timestamp.strftime('%d %b %Y, %I:%M %p') }}</p>
+    <hr>
+    <p style="white-space:pre-wrap;">{{ msg.body }}</p>
+</div>
+
+<a href="{{ url_for('inbox') }}" class="btn btn-secondary" style="margin-top:15px; display:inline-block;">Back to Messages</a>
+{% endblock %}

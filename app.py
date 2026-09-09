@@ -290,6 +290,20 @@ class ParentChild(db.Model):
     child = db.relationship("User", foreign_keys=[child_id], backref="parent_links")
 
 
+class PortalMessage(db.Model):
+    __tablename__ = "portal_messages"
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    subject = db.Column(db.String(150), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+
+    sender = db.relationship("User", foreign_keys=[sender_id], backref="sent_messages")
+    recipient = db.relationship("User", foreign_keys=[recipient_id], backref="received_messages")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -359,6 +373,52 @@ def login():
             return redirect_role_dashboard(user.role)
         flash("Invalid username or password.", "danger")
     return render_template("login.html")
+
+
+@app.route("/messages")
+@login_required
+def inbox():
+    received = PortalMessage.query.filter_by(recipient_id=current_user.id).order_by(PortalMessage.timestamp.desc()).all()
+    sent = PortalMessage.query.filter_by(sender_id=current_user.id).order_by(PortalMessage.timestamp.desc()).all()
+    unread_count = PortalMessage.query.filter_by(recipient_id=current_user.id, is_read=False).count()
+    return render_template("inbox.html", received=received, sent=sent, unread_count=unread_count)
+
+
+@app.route("/messages/compose", methods=["GET", "POST"])
+@login_required
+def compose_message():
+    if request.method == "POST":
+        recipient_id = request.form.get("recipient_id")
+        subject = request.form.get("subject")
+        body = request.form.get("body")
+        if recipient_id and subject and body:
+            from datetime import datetime as dt
+            db.session.add(PortalMessage(
+                sender_id=current_user.id,
+                recipient_id=int(recipient_id),
+                subject=subject,
+                body=body,
+                timestamp=dt.utcnow()
+            ))
+            db.session.commit()
+            flash("Message sent!", "success")
+            return redirect(url_for("inbox"))
+        flash("Please fill in all fields.", "danger")
+
+    all_users = User.query.filter(User.id != current_user.id).all()
+    return render_template("compose_message.html", all_users=all_users)
+
+
+@app.route("/messages/<int:message_id>")
+@login_required
+def view_message(message_id):
+    msg = db.session.get(PortalMessage, message_id)
+    if not msg or (msg.recipient_id != current_user.id and msg.sender_id != current_user.id):
+        abort(403)
+    if msg.recipient_id == current_user.id and not msg.is_read:
+        msg.is_read = True
+        db.session.commit()
+    return render_template("view_message.html", msg=msg)
 
 
 @app.route("/change-password", methods=["GET", "POST"])
@@ -1992,6 +2052,9 @@ with app.app_context():
 
     if "parent_children" not in inspector.get_table_names():
         ParentChild.__table__.create(db.engine)
+
+    if "portal_messages" not in inspector.get_table_names():
+        PortalMessage.__table__.create(db.engine)
 
     if GradingScale.query.count() == 0:
         db.session.add(GradingScale(grade_letter="A", min_score=70.0))

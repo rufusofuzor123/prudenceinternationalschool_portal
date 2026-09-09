@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Messages {% if unread_count > 0 %}({{ unread_count }} unread){% endif %}</h2>
+
+<a href="{{ url_for('compose_message') }}" class="btn btn-primary" style="margin-bottom:15px; display:inline-block;">Compose New Message</a>
+
+<div class="card" style="margin-bottom:20px;">
+    <h3>Inbox</h3>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>From</th><th>Subject</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+                {% for m in received %}
+                <tr style="{{ 'font-weight:bold;' if not m.is_read else '' }}">
+                    <td>{{ m.sender.full_name }}</td>
+                    <td>{{ m.subject }}</td>
+                    <td>{{ m.timestamp.strftime('%d %b %Y, %I:%M %p') }}</td>
+                    <td><a href="{{ url_for('view_message', message_id=m.id) }}" class="btn btn-primary btn-sm">Open</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4">No messages received.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Sent</h3>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>To</th><th>Subject</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+                {% for m in sent %}
+                <tr>
+                    <td>{{ m.recipient.full_name }}</td>
+                    <td>{{ m.subject }}</td>
+                    <td>{{ m.timestamp.strftime('%d %b %Y, %I:%M %p') }}</td>
+                    <td><a href="{{ url_for('view_message', message_id=m.id) }}" class="btn btn-primary btn-sm">Open</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4">No messages sent.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
