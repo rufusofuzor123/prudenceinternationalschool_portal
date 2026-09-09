@@ -69,6 +69,7 @@
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
                     <option value="admin">Admin</option>
+                    <option value="parent">Parent</option>
                 </select>
             </div>
             <div class="form-group">
@@ -390,6 +391,56 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="margin-top:20px;">
+    <div class="card">
+        <h3>Link Parent to Student</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="link_parent">
+            <div class="form-group">
+                <label>Parent</label>
+                <select name="link_parent_id" class="form-control">
+                    {% for p in parents %}
+                    <option value="{{ p.id }}">{{ p.full_name }} ({{ p.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Student</label>
+                <select name="link_child_id" class="form-control">
+                    {% for s in students_for_linking %}
+                    <option value="{{ s.id }}">{{ s.full_name }} ({{ s.assigned_class or 'N/A' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Link</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Current Parent-Student Links</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Parent</th><th>Student</th><th></th></tr></thead>
+                <tbody>
+                    {% for l in parent_links %}
+                    <tr>
+                        <td>{{ l.parent.full_name }}</td>
+                        <td>{{ l.child.full_name }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('unlink_parent', link_id=l.id) }}" onsubmit="return confirm('Remove this link?');">
+                                <button type="submit" class="btn btn-danger btn-sm">Unlink</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3">No links yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

@@ -280,6 +280,16 @@ class Expense(db.Model):
     date_logged = db.Column(db.DateTime, nullable=False)
 
 
+class ParentChild(db.Model):
+    __tablename__ = "parent_children"
+    id = db.Column(db.Integer, primary_key=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    child_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    parent = db.relationship("User", foreign_keys=[parent_id], backref="children_links")
+    child = db.relationship("User", foreign_keys=[child_id], backref="parent_links")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -1390,6 +1400,18 @@ def admin_dashboard():
                 db.session.commit()
                 flash(f"Grading scale for {gs_letter} saved!", "success")
 
+        elif action == "link_parent":
+            parent_id = request.form.get("link_parent_id")
+            child_id = request.form.get("link_child_id")
+            if parent_id and child_id:
+                existing_link = ParentChild.query.filter_by(parent_id=int(parent_id), child_id=int(child_id)).first()
+                if not existing_link:
+                    db.session.add(ParentChild(parent_id=int(parent_id), child_id=int(child_id)))
+                    db.session.commit()
+                    flash("Parent linked to student!", "success")
+                else:
+                    flash("This link already exists.", "danger")
+
         elif action == "assign_teacher":
             ta_teacher_id = request.form.get("ta_teacher_id")
             ta_subject_id = request.form.get("ta_subject_id")
@@ -1551,7 +1573,10 @@ def admin_dashboard():
         grading_scales=grading_scales,
         total_income=total_income,
         total_expenditure=total_expenditure,
-        net_balance=net_balance
+        net_balance=net_balance,
+        parents=User.query.filter_by(role="parent").all(),
+        students_for_linking=User.query.filter_by(role="student").all(),
+        parent_links=ParentChild.query.all()
     )
 @app.route("/admin/payroll", methods=["GET", "POST"])
 @login_required
@@ -1770,6 +1795,19 @@ def delete_grading_scale(scale_id):
     return redirect(url_for("admin_dashboard"))
 
 
+@app.route("/admin/unlink-parent/<int:link_id>", methods=["POST"])
+@login_required
+def unlink_parent(link_id):
+    if current_user.role != "admin":
+        abort(403)
+    link = db.session.get(ParentChild, link_id)
+    if link:
+        db.session.delete(link)
+        db.session.commit()
+        flash("Parent-child link removed.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/admin/delete-notice/<int:notice_id>", methods=["POST"])
 @login_required
 def delete_notice(notice_id):
@@ -1920,6 +1958,9 @@ with app.app_context():
 
     if "expenses" not in inspector.get_table_names():
         Expense.__table__.create(db.engine)
+
+    if "parent_children" not in inspector.get_table_names():
+        ParentChild.__table__.create(db.engine)
 
     if GradingScale.query.count() == 0:
         db.session.add(GradingScale(grade_letter="A", min_score=70.0))
