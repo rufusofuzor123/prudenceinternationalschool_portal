@@ -339,6 +339,8 @@ def redirect_role_dashboard(role: str):
         return redirect(url_for("admin_dashboard"))
     if role == "teacher":
         return redirect(url_for("teacher_dashboard"))
+    if role == "parent":
+        return redirect(url_for("parent_dashboard"))
     return redirect(url_for("student_dashboard"))
 
 
@@ -533,6 +535,35 @@ def get_class_position(student, session_id=None):
         if sid == student.id:
             return idx, len(averages), avg
     return None, len(averages), 0
+
+
+@app.route("/parent/dashboard")
+@login_required
+def parent_dashboard():
+    if current_user.role != "parent":
+        abort(403)
+
+    links = ParentChild.query.filter_by(parent_id=current_user.id).all()
+    children_data = []
+    for link in links:
+        child = link.child
+        fee_total = get_student_fee(child)
+        fee_paid_amt = get_student_total_paid(child)
+        fee_balance = max(fee_total - fee_paid_amt, 0)
+        class_pos, class_total, class_avg = get_class_position(child)
+        children_data.append({
+            "child": child,
+            "fee_total": fee_total,
+            "fee_paid_amt": fee_paid_amt,
+            "fee_balance": fee_balance,
+            "class_position": class_pos,
+            "class_total": class_total,
+            "class_average": class_avg,
+            "results_published": is_results_published()
+        })
+
+    notices = Notice.query.order_by(Notice.date_posted.desc()).all()
+    return render_template("parent_dashboard.html", children_data=children_data, notices=notices)
 
 
 @app.route("/student/dashboard", methods=["GET", "POST"])
