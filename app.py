@@ -1996,6 +1996,52 @@ def audit_trail():
     return render_template("audit_trail.html", logs=logs)
 
 
+def build_backup_zip():
+    import csv, zipfile
+    zip_buffer = io.BytesIO()
+    tables = {
+        "users": User.query.all(),
+        "academic_results": AcademicResult.query.all(),
+        "attendance": Attendance.query.all(),
+        "payments": Payment.query.all(),
+        "salary_records": SalaryRecord.query.all(),
+        "expenses": Expense.query.all(),
+        "fee_structures": FeeStructure.query.all(),
+        "timetable_entries": TimetableEntry.query.all(),
+        "notices": Notice.query.all(),
+        "events": Event.query.all(),
+        "audit_logs": AuditLog.query.all(),
+    }
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for table_name, rows in tables.items():
+            csv_output = io.StringIO()
+            writer = csv.writer(csv_output)
+            if rows:
+                columns = [c.name for c in rows[0].__table__.columns]
+                writer.writerow(columns)
+                for row in rows:
+                    writer.writerow([getattr(row, c) for c in columns])
+            else:
+                writer.writerow(["No data"])
+            zf.writestr(f"{table_name}.csv", csv_output.getvalue())
+    zip_buffer.seek(0)
+    return zip_buffer
+
+
+@app.route("/admin/backup/download")
+@login_required
+def download_backup():
+    if current_user.role != "admin":
+        abort(403)
+    zip_buffer = build_backup_zip()
+    log_audit("Full Backup Downloaded", f"Downloaded by {current_user.full_name}")
+    from datetime import datetime as dt
+    filename = f"backup_{dt.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+    response = Response(zip_buffer.read(), mimetype="application/zip")
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
+
+
 @app.route("/admin/search")
 @login_required
 def global_search():

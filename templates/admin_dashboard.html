@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Admin Control Panel</h2>
-<a href="{{ url_for('global_search') }}" class="btn btn-primary no-print" style="margin-bottom:15px; display:inline-block;">Global Search</a>
+<a href="{{ url_for('global_search') }}" class="btn btn-primary no-print" style="margin-bottom:15px; display:inline-block;">Global Search</a> <a href="{{ url_for('download_backup') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Download Full Backup</a>
 
 <div class="card no-print" style="margin-bottom:20px;">
     <h3>Financial Summary</h3>
