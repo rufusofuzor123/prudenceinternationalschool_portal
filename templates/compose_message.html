@@ -7,7 +7,8 @@
         <div class="form-group">
             <label>To</label>
             <select name="recipient_id" class="form-control" required>
-                {% for u in all_users %}
+                <option value="" selected disabled hidden>-- Select --</option>
+{% for u in all_users %}
                 <option value="{{ u.id }}">{{ u.full_name }} ({{ u.role|capitalize }})</option>
                 {% endfor %}
             </select>

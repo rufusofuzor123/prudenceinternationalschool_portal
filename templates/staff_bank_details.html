@@ -7,7 +7,8 @@
         <div class="form-group">
             <label>Bank</label>
             <select name="bank_code" class="form-control" required>
-                <option value="044" {% if staff.bank_code == '044' %}selected{% endif %}>Access Bank</option>
+                <option value="" selected disabled hidden>-- Select --</option>
+<option value="044" {% if staff.bank_code == '044' %}selected{% endif %}>Access Bank</option>
                 <option value="023" {% if staff.bank_code == '023' %}selected{% endif %}>Citibank Nigeria</option>
                 <option value="050" {% if staff.bank_code == '050' %}selected{% endif %}>Ecobank Nigeria</option>
                 <option value="070" {% if staff.bank_code == '070' %}selected{% endif %}>Fidelity Bank</option>

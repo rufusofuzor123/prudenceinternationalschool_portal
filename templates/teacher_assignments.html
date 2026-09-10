@@ -8,7 +8,8 @@
         <div class="form-group">
             <label>Class / Subject</label>
             <select name="assign_class_name" id="classSel" class="form-control" onchange="syncSubject()" required>
-                {% for t in my_teaching %}
+                <option value="" selected disabled hidden>-- Select --</option>
+{% for t in my_teaching %}
                 <option value="{{ t.class_name }}" data-subject="{{ t.subject_id }}">{{ t.class_name }} - {{ t.subject.name }}</option>
                 {% endfor %}
             </select>

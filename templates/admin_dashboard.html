@@ -65,8 +65,9 @@
             <div class="form-group"><label>Password</label><input type="password" name="password" class="form-control" required></div>
             <div class="form-group">
                 <label>Role</label>
-                <select name="role" class="form-control">
-                    <option value="student">Student</option>
+                <select name="role" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+<option value="student">Student</option>
                     <option value="teacher">Teacher</option>
                     <option value="admin">Admin</option>
                     <option value="parent">Parent</option>
@@ -127,8 +128,9 @@
             <input type="hidden" name="action" value="set_current_session">
             <div class="form-group">
                 <label>Set Current Session</label>
-                <select name="session_id" class="form-control">
-                    {% for s in sessions %}
+                <select name="session_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for s in sessions %}
                     <option value="{{ s.id }}">{{ s.name }}{{ ' (current)' if s.is_current else '' }}</option>
                     {% endfor %}
                 </select>
@@ -139,8 +141,9 @@
             <input type="hidden" name="action" value="set_current_term">
             <div class="form-group">
                 <label>Set Current Term (currently: {{ current_term }})</label>
-                <select name="current_term" class="form-control">
-                    <option>First Term</option>
+                <select name="current_term" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+<option>First Term</option>
                     <option>Second Term</option>
                     <option>Third Term</option>
                 </select>
@@ -157,16 +160,18 @@
             <input type="hidden" name="action" value="add_timetable_entry">
             <div class="form-group">
                 <label>Class</label>
-                <select name="tt_class_name" class="form-control">
-                    {% for c in classes %}
+                <select name="tt_class_name" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for c in classes %}
                     <option value="{{ c.name }}">{{ c.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>Day</label>
-                <select name="tt_day" class="form-control">
-                    <option>Monday</option>
+                <select name="tt_day" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+<option>Monday</option>
                     <option>Tuesday</option>
                     <option>Wednesday</option>
                     <option>Thursday</option>
@@ -176,8 +181,9 @@
             <div class="form-group"><label>Time (e.g. 8:00-8:40am)</label><input type="text" name="tt_time" class="form-control" required></div>
             <div class="form-group">
                 <label>Subject</label>
-                <select name="tt_subject_id" class="form-control">
-                    {% for s in subjects %}
+                <select name="tt_subject_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for s in subjects %}
                     <option value="{{ s.id }}">{{ s.name }}</option>
                     {% endfor %}
                 </select>
@@ -223,24 +229,27 @@
             <input type="hidden" name="action" value="add_fee_structure">
             <div class="form-group">
                 <label>Class</label>
-                <select name="fs_class_name" class="form-control">
-                    {% for c in classes %}
+                <select name="fs_class_name" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for c in classes %}
                     <option value="{{ c.name }}">{{ c.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>Term</label>
-                <select name="fs_term" class="form-control">
-                    <option>First Term</option>
+                <select name="fs_term" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+<option>First Term</option>
                     <option>Second Term</option>
                     <option>Third Term</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Fee Type</label>
-                <select name="fs_type" class="form-control">
-                    <option>Tuition</option>
+                <select name="fs_type" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+<option>Tuition</option>
                     <option>PTA Levy</option>
                     <option>Exam Fee</option>
                     <option>Uniform</option>
@@ -281,24 +290,27 @@
             <input type="hidden" name="action" value="assign_teacher">
             <div class="form-group">
                 <label>Teacher</label>
-                <select name="ta_teacher_id" class="form-control">
-                    {% for t in teachers %}
+                <select name="ta_teacher_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for t in teachers %}
                     <option value="{{ t.id }}">{{ t.full_name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>Subject</label>
-                <select name="ta_subject_id" class="form-control">
-                    {% for s in subjects %}
+                <select name="ta_subject_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for s in subjects %}
                     <option value="{{ s.id }}">{{ s.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>Class</label>
-                <select name="ta_class_name" class="form-control">
-                    {% for c in classes %}
+                <select name="ta_class_name" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for c in classes %}
                     <option value="{{ c.name }}">{{ c.name }}</option>
                     {% endfor %}
                 </select>
@@ -338,16 +350,18 @@
         <input type="hidden" name="action" value="promote_students">
         <div class="form-group">
             <label>From Class</label>
-            <select name="promote_from" class="form-control">
-                {% for c in classes %}
+            <select name="promote_from" class="form-control" required>
+                <option value="" selected disabled hidden>-- Select --</option>
+{% for c in classes %}
                 <option value="{{ c.name }}">{{ c.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group">
             <label>To Class</label>
-            <select name="promote_to" class="form-control">
-                {% for c in classes %}
+            <select name="promote_to" class="form-control" required>
+                <option value="" selected disabled hidden>-- Select --</option>
+{% for c in classes %}
                 <option value="{{ c.name }}">{{ c.name }}</option>
                 {% endfor %}
             </select>
@@ -363,8 +377,9 @@
         <input type="hidden" name="action" value="set_grading_scale">
         <div class="form-group">
             <label>Grade Letter</label>
-            <select name="gs_letter" class="form-control">
-                <option>A</option>
+            <select name="gs_letter" class="form-control" required>
+                <option value="" selected disabled hidden>-- Select --</option>
+<option>A</option>
                 <option>B</option>
                 <option>C</option>
                 <option>D</option>
@@ -401,16 +416,18 @@
             <input type="hidden" name="action" value="link_parent">
             <div class="form-group">
                 <label>Parent</label>
-                <select name="link_parent_id" class="form-control">
-                    {% for p in parents %}
+                <select name="link_parent_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for p in parents %}
                     <option value="{{ p.id }}">{{ p.full_name }} ({{ p.username }})</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>Student</label>
-                <select name="link_child_id" class="form-control">
-                    {% for s in students_for_linking %}
+                <select name="link_child_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+{% for s in students_for_linking %}
                     <option value="{{ s.id }}">{{ s.full_name }} ({{ s.assigned_class or 'N/A' }})</option>
                     {% endfor %}
                 </select>

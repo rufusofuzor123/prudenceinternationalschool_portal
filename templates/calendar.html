@@ -12,8 +12,9 @@
         <div class="form-group"><label>Date</label><input type="date" name="event_date" class="form-control" required></div>
         <div class="form-group">
             <label>Type</label>
-            <select name="event_type" class="form-control">
-                <option>General</option>
+            <select name="event_type" class="form-control" required>
+                <option value="" selected disabled hidden>-- Select --</option>
+<option>General</option>
                 <option>Holiday</option>
                 <option>Exam</option>
                 <option>Meeting</option>
