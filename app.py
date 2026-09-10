@@ -2022,32 +2022,6 @@ def global_search():
     return render_template("global_search.html", query=query, results=results)
 
 
-@app.route("/admin/search")
-@login_required
-def global_search():
-    if current_user.role != "admin":
-        abort(403)
-
-    query = request.args.get("q", "").strip()
-    results = []
-    if query:
-        like_pattern = f"%{query}%"
-        results = User.query.filter(
-            db.or_(
-                User.full_name.ilike(like_pattern),
-                User.username.ilike(like_pattern),
-                User.email.ilike(like_pattern),
-                User.admission_number.ilike(like_pattern),
-                User.parent_name.ilike(like_pattern),
-                User.parent_email.ilike(like_pattern),
-                User.parent_phone.ilike(like_pattern),
-                User.staff_phone.ilike(like_pattern)
-            )
-        ).all()
-
-    return render_template("global_search.html", query=query, results=results)
-
-
 @app.route("/admin/outstanding-fees")
 @login_required
 def outstanding_fees():
