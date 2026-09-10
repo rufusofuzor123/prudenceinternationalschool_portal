@@ -2028,6 +2028,40 @@ def build_backup_zip():
     return zip_buffer
 
 
+@app.route("/system/trigger-backup")
+def trigger_scheduled_backup():
+    token = request.args.get("token")
+    expected_token = os.environ.get("BACKUP_TRIGGER_TOKEN")
+    if not expected_token or token != expected_token:
+        abort(403)
+
+    admins = User.query.filter_by(role="admin").filter(User.email.isnot(None)).all()
+    if not admins:
+        return "No admin email on file to send backup to.", 200
+
+    zip_buffer = build_backup_zip()
+    zip_bytes = zip_buffer.read()
+    from datetime import datetime as dt
+    filename = f"backup_{dt.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+
+    sent_count = 0
+    for admin in admins:
+        try:
+            msg = Message(
+                subject=f"Daily Portal Backup - {dt.utcnow().strftime('%d %b %Y')}",
+                recipients=[admin.email],
+                body="Attached is the automated daily backup of the school portal database."
+            )
+            msg.attach(filename, "application/zip", zip_bytes)
+            mail.send(msg)
+            sent_count += 1
+        except Exception:
+            pass
+
+    log_audit("Automated Backup Sent", f"Emailed to {sent_count} admin(s)")
+    return f"Backup sent to {sent_count} admin(s).", 200
+
+
 @app.route("/admin/backup/download")
 @login_required
 def download_backup():
