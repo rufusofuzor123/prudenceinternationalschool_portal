@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Global Search</h2>
+
+<div class="card no-print" style="margin-bottom:20px;">
+    <form method="GET">
+        <div class="form-group">
+            <label>Search by name, username, email, admission number, or phone</label>
+            <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Type to search..." autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</div>
+
+{% if query %}
+<div class="card">
+    <h3>Results for "{{ query }}" ({{ results|length }} found)</h3>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Class</th><th>Email</th><th>Admission No.</th><th>Phone</th></tr></thead>
+            <tbody>
+                {% for u in results %}
+                <tr>
+                    <td>{{ u.full_name }}</td>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.role|capitalize }}</td>
+                    <td>{{ u.assigned_class or 'N/A' }}</td>
+                    <td>{{ u.email or 'N/A' }}</td>
+                    <td>{{ u.admission_number or 'N/A' }}</td>
+                    <td>{{ u.staff_phone or u.parent_phone or 'N/A' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7">No matches found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
