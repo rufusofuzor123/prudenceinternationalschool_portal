@@ -462,6 +462,80 @@
     </div>
 </div>
 
+<div class="dashboard-grid" style="margin-top:20px;">
+    <div class="card">
+        <h3>Create Subject Combination</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="create_combination">
+            <div class="form-group"><label>Combination Name (e.g. Science, Arts)</label><input type="text" name="combo_name" class="form-control" required></div>
+            <button type="submit" class="btn btn-primary">Create Combination</button>
+        </form>
+
+        <h4 style="margin-top:20px;">Add Subject to Combination</h4>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_combo_subject">
+            <div class="form-group">
+                <label>Combination</label>
+                <select name="combo_id" class="form-control" required>
+                    {% for c in combinations %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Subject</label>
+                <select name="combo_subject_id" class="form-control" required>
+                    {% for s in subjects %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Subject</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Assign Combination to Student</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="assign_combination">
+            <div class="form-group">
+                <label>Student</label>
+                <select name="combo_student_id" class="form-control" required>
+                    {% for s in students_for_linking %}
+                    <option value="{{ s.id }}">{{ s.full_name }} ({{ s.assigned_class or 'N/A' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Combination</label>
+                <select name="assign_combo_id" class="form-control" required>
+                    {% for c in combinations %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Assign</button>
+        </form>
+
+        <h4 style="margin-top:20px;">Current Combinations</h4>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Combination</th><th>Subjects</th></tr></thead>
+                <tbody>
+                    {% for c in combinations %}
+                    <tr>
+                        <td>{{ c.name }}</td>
+                        <td>{% for cs in combination_subjects if cs.combination_id == c.id %}{{ cs.subject.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="2">No combinations yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="card" style="margin-top:20px;">
     <h3>Post Notice</h3>
     <form method="POST">

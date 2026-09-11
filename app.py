@@ -75,6 +75,7 @@ class User(UserMixin, db.Model):
     bank_account_number = db.Column(db.String(20), nullable=True)
     bank_account_name = db.Column(db.String(150), nullable=True)
     paystack_recipient_code = db.Column(db.String(100), nullable=True)
+    combination_id = db.Column(db.Integer, db.ForeignKey("subject_combinations.id"), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -320,6 +321,22 @@ class AuditLog(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False)
 
     actor = db.relationship("User", backref="audit_logs")
+
+
+class SubjectCombination(db.Model):
+    __tablename__ = "subject_combinations"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+
+
+class CombinationSubject(db.Model):
+    __tablename__ = "combination_subjects"
+    id = db.Column(db.Integer, primary_key=True)
+    combination_id = db.Column(db.Integer, db.ForeignKey("subject_combinations.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+
+    combination = db.relationship("SubjectCombination", backref="combination_subjects")
+    subject = db.relationship("Subject", backref="combination_links")
 
 
 class AcademicResult(db.Model):
@@ -657,7 +674,11 @@ def student_dashboard():
     if current_user.role != "student":
         abort(403)
 
-    available_subjects = Subject.query.all()
+    if current_user.combination_id:
+        combo_subject_ids = [cs.subject_id for cs in CombinationSubject.query.filter_by(combination_id=current_user.combination_id).all()]
+        available_subjects = Subject.query.filter(Subject.id.in_(combo_subject_ids)).all()
+    else:
+        available_subjects = Subject.query.all()
     current_session = get_current_session()
     result_filter = {"student_id": current_user.id}
     if current_session:
@@ -1529,6 +1550,33 @@ def admin_dashboard():
                 else:
                     flash("This link already exists.", "danger")
 
+        elif action == "create_combination":
+            combo_name = request.form.get("combo_name")
+            if combo_name and not SubjectCombination.query.filter_by(name=combo_name).first():
+                db.session.add(SubjectCombination(name=combo_name))
+                db.session.commit()
+                flash("Subject combination created!", "success")
+
+        elif action == "add_combo_subject":
+            combo_id = request.form.get("combo_id")
+            subj_id = request.form.get("combo_subject_id")
+            if combo_id and subj_id:
+                existing_link = CombinationSubject.query.filter_by(combination_id=int(combo_id), subject_id=int(subj_id)).first()
+                if not existing_link:
+                    db.session.add(CombinationSubject(combination_id=int(combo_id), subject_id=int(subj_id)))
+                    db.session.commit()
+                    flash("Subject added to combination!", "success")
+
+        elif action == "assign_combination":
+            student_id = request.form.get("combo_student_id")
+            combo_id = request.form.get("assign_combo_id")
+            if student_id and combo_id:
+                student_obj = db.session.get(User, int(student_id))
+                if student_obj:
+                    student_obj.combination_id = int(combo_id)
+                    db.session.commit()
+                    flash(f"Combination assigned to {student_obj.full_name}!", "success")
+
         elif action == "assign_teacher":
             ta_teacher_id = request.form.get("ta_teacher_id")
             ta_subject_id = request.form.get("ta_subject_id")
@@ -1693,7 +1741,9 @@ def admin_dashboard():
         net_balance=net_balance,
         parents=User.query.filter_by(role="parent").all(),
         students_for_linking=User.query.filter_by(role="student").all(),
-        parent_links=ParentChild.query.all()
+        parent_links=ParentChild.query.all(),
+        combinations=SubjectCombination.query.all(),
+        combination_subjects=CombinationSubject.query.all()
     )
 @app.route("/admin/payroll", methods=["GET", "POST"])
 @login_required
@@ -2426,6 +2476,15 @@ with app.app_context():
         if col_name not in user_columns_2:
             db.session.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
             db.session.commit()
+
+    if "subject_combinations" not in inspector.get_table_names():
+        SubjectCombination.__table__.create(db.engine)
+    if "combination_subjects" not in inspector.get_table_names():
+        CombinationSubject.__table__.create(db.engine)
+    user_columns_3 = [col["name"] for col in inspector.get_columns("users")]
+    if "combination_id" not in user_columns_3:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN combination_id INTEGER REFERENCES subject_combinations(id)"))
+        db.session.commit()
 
     if "grading_scales" not in inspector.get_table_names():
         GradingScale.__table__.create(db.engine)
