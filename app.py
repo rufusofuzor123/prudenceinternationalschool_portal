@@ -2076,6 +2076,19 @@ def download_backup():
     return response
 
 
+@app.route("/admin/retention")
+@login_required
+def record_retention():
+    if current_user.role != "admin":
+        abort(403)
+
+    active_class_names = [c.name for c in SchoolClass.query.all()]
+    students = User.query.filter_by(role="student").all()
+    candidates = [s for s in students if s.assigned_class not in active_class_names]
+
+    return render_template("record_retention.html", candidates=candidates, active_class_names=active_class_names)
+
+
 @app.route("/admin/search")
 @login_required
 def global_search():

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Record Retention Review</h2>
+
+<div class="card no-print" style="margin-bottom:20px;">
+    <h3>About This Page</h3>
+    <p style="font-size:13px; color:#666;">
+        This lists students whose assigned class no longer matches any currently active class —
+        typically because they graduated or the class was renamed/removed. Review each one and decide
+        whether to keep the record (e.g. for alumni purposes) or delete it permanently along with all
+        linked data (results, attendance, payments, etc.). This is a suggested workflow, not a legal
+        retention policy — consult your school's own record-keeping requirements before permanently
+        deleting student data.
+    </p>
+</div>
+
+<div class="card">
+    <h3>Candidates for Review ({{ candidates|length }})</h3>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Name</th><th>Old Class</th><th>Admission No.</th><th></th></tr></thead>
+            <tbody>
+                {% for s in candidates %}
+                <tr>
+                    <td>{{ s.full_name }}</td>
+                    <td>{{ s.assigned_class or 'None' }}</td>
+                    <td>{{ s.admission_number or 'N/A' }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_user', user_id=s.id) }}" onsubmit="return confirm('Permanently delete {{ s.full_name }} and all their linked records? This cannot be undone.');">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete Permanently</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4">No candidates found — all students are in active classes.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
