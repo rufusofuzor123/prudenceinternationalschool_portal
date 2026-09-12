@@ -76,6 +76,7 @@ class User(UserMixin, db.Model):
     bank_account_name = db.Column(db.String(150), nullable=True)
     paystack_recipient_code = db.Column(db.String(100), nullable=True)
     combination_id = db.Column(db.Integer, db.ForeignKey("subject_combinations.id"), nullable=True)
+    campus_id = db.Column(db.Integer, db.ForeignKey("campuses.id"), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -94,6 +95,7 @@ class SchoolClass(db.Model):
     __tablename__ = "school_classes"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
+    campus_id = db.Column(db.Integer, db.ForeignKey("campuses.id"), nullable=True)
 
 
 class Session(db.Model):
@@ -337,6 +339,13 @@ class CombinationSubject(db.Model):
 
     combination = db.relationship("SubjectCombination", backref="combination_subjects")
     subject = db.relationship("Subject", backref="combination_links")
+
+
+class Campus(db.Model):
+    __tablename__ = "campuses"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    address = db.Column(db.String(300), nullable=True)
 
 
 class AcademicResult(db.Model):
@@ -1432,6 +1441,8 @@ def admin_dashboard():
             qualification = request.form.get("qualification")
             hire_date_str = request.form.get("hire_date")
             staff_phone = request.form.get("staff_phone")
+            campus_id_str = request.form.get("campus_id")
+            campus_id = int(campus_id_str) if campus_id_str else None
             from datetime import datetime as dt
             hire_date = dt.strptime(hire_date_str, "%Y-%m-%d").date() if hire_date_str else None
 
@@ -1458,7 +1469,8 @@ def admin_dashboard():
                     qualification=qualification,
                     hire_date=hire_date,
                     staff_phone=staff_phone,
-                    admission_number=admission_number
+                    admission_number=admission_number,
+                    campus_id=campus_id
                 )
                 new_user.set_password(password)
                 db.session.add(new_user)
@@ -1549,6 +1561,24 @@ def admin_dashboard():
                     flash("Parent linked to student!", "success")
                 else:
                     flash("This link already exists.", "danger")
+
+        elif action == "create_campus":
+            campus_name = request.form.get("campus_name")
+            campus_address = request.form.get("campus_address")
+            if campus_name and not Campus.query.filter_by(name=campus_name).first():
+                db.session.add(Campus(name=campus_name, address=campus_address))
+                db.session.commit()
+                flash("Campus created!", "success")
+
+        elif action == "assign_class_campus":
+            class_id = request.form.get("class_id_for_campus")
+            campus_id = request.form.get("campus_id_for_class")
+            if class_id and campus_id:
+                class_obj = db.session.get(SchoolClass, int(class_id))
+                if class_obj:
+                    class_obj.campus_id = int(campus_id)
+                    db.session.commit()
+                    flash(f"{class_obj.name} assigned to campus!", "success")
 
         elif action == "create_combination":
             combo_name = request.form.get("combo_name")
@@ -1743,7 +1773,8 @@ def admin_dashboard():
         students_for_linking=User.query.filter_by(role="student").all(),
         parent_links=ParentChild.query.all(),
         combinations=SubjectCombination.query.all(),
-        combination_subjects=CombinationSubject.query.all()
+        combination_subjects=CombinationSubject.query.all(),
+        campuses=Campus.query.all()
     )
 @app.route("/admin/payroll", methods=["GET", "POST"])
 @login_required
@@ -2484,6 +2515,19 @@ with app.app_context():
     user_columns_3 = [col["name"] for col in inspector.get_columns("users")]
     if "combination_id" not in user_columns_3:
         db.session.execute(text("ALTER TABLE users ADD COLUMN combination_id INTEGER REFERENCES subject_combinations(id)"))
+        db.session.commit()
+
+    if "campuses" not in inspector.get_table_names():
+        Campus.__table__.create(db.engine)
+
+    user_columns_4 = [col["name"] for col in inspector.get_columns("users")]
+    if "campus_id" not in user_columns_4:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN campus_id INTEGER REFERENCES campuses(id)"))
+        db.session.commit()
+
+    class_columns = [col["name"] for col in inspector.get_columns("school_classes")]
+    if "campus_id" not in class_columns:
+        db.session.execute(text("ALTER TABLE school_classes ADD COLUMN campus_id INTEGER REFERENCES campuses(id)"))
         db.session.commit()
 
     if "grading_scales" not in inspector.get_table_names():
