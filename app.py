@@ -77,6 +77,7 @@ class User(UserMixin, db.Model):
     paystack_recipient_code = db.Column(db.String(100), nullable=True)
     combination_id = db.Column(db.Integer, db.ForeignKey("subject_combinations.id"), nullable=True)
     campus_id = db.Column(db.Integer, db.ForeignKey("campuses.id"), nullable=True)
+    admin_type = db.Column(db.String(30), nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -1443,6 +1444,7 @@ def admin_dashboard():
             staff_phone = request.form.get("staff_phone")
             campus_id_str = request.form.get("campus_id")
             campus_id = int(campus_id_str) if campus_id_str else None
+            admin_type = request.form.get("admin_type") if role == "admin" else None
             from datetime import datetime as dt
             hire_date = dt.strptime(hire_date_str, "%Y-%m-%d").date() if hire_date_str else None
 
@@ -1470,7 +1472,8 @@ def admin_dashboard():
                     hire_date=hire_date,
                     staff_phone=staff_phone,
                     admission_number=admission_number,
-                    campus_id=campus_id
+                    campus_id=campus_id,
+                    admin_type=admin_type
                 )
                 new_user.set_password(password)
                 db.session.add(new_user)
@@ -1750,6 +1753,17 @@ def admin_dashboard():
     })
 
     grading_scales = GradingScale.query.order_by(GradingScale.min_score.desc()).all()
+
+    if current_user.admin_type == "Bursar":
+        return render_template(
+            "bursar_dashboard.html",
+            fee_structures=fee_structures,
+            classes=classes,
+            total_income=total_income,
+            total_expenditure=total_expenditure,
+            net_balance=net_balance,
+            chart_data=chart_data
+        )
 
     return render_template(
         "admin_dashboard.html",
@@ -2528,6 +2542,11 @@ with app.app_context():
     class_columns = [col["name"] for col in inspector.get_columns("school_classes")]
     if "campus_id" not in class_columns:
         db.session.execute(text("ALTER TABLE school_classes ADD COLUMN campus_id INTEGER REFERENCES campuses(id)"))
+        db.session.commit()
+
+    user_columns_5 = [col["name"] for col in inspector.get_columns("users")]
+    if "admin_type" not in user_columns_5:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN admin_type VARCHAR(30)"))
         db.session.commit()
 
     if "grading_scales" not in inspector.get_table_names():

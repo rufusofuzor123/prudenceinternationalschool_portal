@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Bursar Dashboard — Finance</h2>
+<p style="font-size:13px; color:#666;">
+    This view shows finance-related tools only. Note: this is a display restriction — please don't share
+    direct links to other admin pages, as this account still has admin-level access underneath.
+</p>
+
+<a href="{{ url_for('admin_payroll') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Payroll</a>
+<a href="{{ url_for('admin_expenses') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Expenses</a>
+<a href="{{ url_for('outstanding_fees') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Outstanding Fees</a>
+<a href="{{ url_for('revenue_projections') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Revenue Projections</a>
+<a href="{{ url_for('financial_statement_pdf') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Financial Statement PDF</a>
+<a href="{{ url_for('export_payments') }}" class="btn btn-secondary no-print" style="margin-bottom:15px; display:inline-block;">Export Payments (CSV)</a>
+
+<div class="card no-print" style="margin-top:20px; margin-bottom:20px;">
+    <h3>Financial Summary</h3>
+    <div class="dashboard-grid">
+        <div><strong>Total Income:</strong><br>₦{{ "{:,.2f}".format(total_income) }}</div>
+        <div><strong>Total Expenditure:</strong><br>₦{{ "{:,.2f}".format(total_expenditure) }}</div>
+        <div><strong>Net Balance:</strong><br><span style="color:{{ 'green' if net_balance >= 0 else 'red' }};">₦{{ "{:,.2f}".format(net_balance) }}</span></div>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="margin-top:20px;">
+    <div class="card">
+        <h3>Set Fee Structure</h3>
+        <form method="POST" action="{{ url_for('admin_dashboard') }}">
+            <input type="hidden" name="action" value="add_fee_structure">
+            <div class="form-group">
+                <label>Class</label>
+                <select name="fs_class_name" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
+                    {% for c in classes %}
+                    <option value="{{ c.name }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Term</label>
+                <select name="fs_term" class="form-control">
+                    <option>First Term</option>
+                    <option>Second Term</option>
+                    <option>Third Term</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fee Type</label>
+                <select name="fs_type" class="form-control">
+                    <option>Tuition</option>
+                    <option>PTA Levy</option>
+                    <option>Exam Fee</option>
+                    <option>Uniform</option>
+                    <option>Books</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Amount (NGN)</label><input type="number" name="fs_amount" class="form-control" required></div>
+            <button type="submit" class="btn btn-primary">Save Fee</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Current Fee Structures</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Class</th><th>Term</th><th>Fee Type</th><th>Amount</th></tr></thead>
+                <tbody>
+                    {% for f in fee_structures %}
+                    <tr>
+                        <td>{{ f.class_name }}</td>
+                        <td>{{ f.term }}</td>
+                        <td>{{ f.fee_type }}</td>
+                        <td>₦{{ "{:,.2f}".format(f.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -98,6 +98,13 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group">
+                <label>Admin Type (only applies if Role = Admin)</label>
+                <select name="admin_type" class="form-control">
+                    <option value="Super Admin">Super Admin (sees everything)</option>
+                    <option value="Bursar">Bursar (finance dashboard only)</option>
+                </select>
+            </div>
             <button type="submit" class="btn btn-primary">Create User</button>
         </form>
     </div>
