@@ -527,6 +527,7 @@
             <div class="form-group">
                 <label>Combination</label>
                 <select name="combo_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     {% for c in combinations %}
                     <option value="{{ c.id }}">{{ c.name }}</option>
                     {% endfor %}
@@ -535,6 +536,7 @@
             <div class="form-group">
                 <label>Subject</label>
                 <select name="combo_subject_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     {% for s in subjects %}
                     <option value="{{ s.id }}">{{ s.name }}</option>
                     {% endfor %}
@@ -551,6 +553,7 @@
             <div class="form-group">
                 <label>Student</label>
                 <select name="combo_student_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     {% for s in students_for_linking %}
                     <option value="{{ s.id }}">{{ s.full_name }} ({{ s.assigned_class or 'N/A' }})</option>
                     {% endfor %}
@@ -559,6 +562,7 @@
             <div class="form-group">
                 <label>Combination</label>
                 <select name="assign_combo_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     {% for c in combinations %}
                     <option value="{{ c.id }}">{{ c.name }}</option>
                     {% endfor %}
