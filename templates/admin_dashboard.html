@@ -91,7 +91,8 @@
             <div class="form-group"><label>Staff Phone (staff only)</label><input type="text" name="staff_phone" class="form-control"></div>
             <div class="form-group">
                 <label>Campus (optional)</label>
-                <select name="campus_id" class="form-control">
+                <select name="campus_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     <option value="">None / Single Campus</option>
                     {% for c in campuses %}
                     <option value="{{ c.id }}">{{ c.name }}</option>
@@ -100,7 +101,8 @@
             </div>
             <div class="form-group">
                 <label>Admin Type (only applies if Role = Admin)</label>
-                <select name="admin_type" class="form-control">
+                <select name="admin_type" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     <option value="Super Admin">Super Admin (sees everything)</option>
                     <option value="Bursar">Bursar (finance dashboard only)</option>
                 </select>
@@ -207,7 +209,8 @@
             </div>
             <div class="form-group">
                 <label>Teacher (optional)</label>
-                <select name="tt_teacher_id" class="form-control">
+                <select name="tt_teacher_id" class="form-control" required>
+                    <option value="" selected disabled hidden>-- Select --</option>
                     <option value="">-- None --</option>
                     {% for t in teachers %}
                     <option value="{{ t.id }}">{{ t.full_name }}</option>

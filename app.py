@@ -29,6 +29,35 @@ app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
 app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_USERNAME")
 mail = Mail(app)
 
+BURSAR_ALLOWED_ENDPOINTS = {
+    "static", "login", "logout", "change_password",
+    "forgot_password", "reset_password",
+    "inbox", "compose_message", "view_message",
+    "view_calendar",
+    "admin_dashboard",
+    "admin_payroll", "download_payslip",
+    "staff_bank_details", "verify_staff_account", "initiate_salary_payout",
+    "admin_expenses",
+    "outstanding_fees", "revenue_projections", "financial_statement_pdf",
+    "export_payments",
+}
+
+BURSAR_ALLOWED_DASHBOARD_ACTIONS = {"add_fee_structure"}
+
+
+@app.before_request
+def restrict_bursar_access():
+    if not current_user.is_authenticated:
+        return
+    if current_user.role != "admin" or current_user.admin_type != "Bursar":
+        return
+    if request.endpoint not in BURSAR_ALLOWED_ENDPOINTS:
+        abort(403)
+    if request.endpoint == "admin_dashboard" and request.method == "POST":
+        action = request.form.get("action")
+        if action and action not in BURSAR_ALLOWED_DASHBOARD_ACTIONS:
+            abort(403)
+
 UPLOAD_FOLDER = os.path.join("static", "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
