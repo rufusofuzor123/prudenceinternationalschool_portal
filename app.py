@@ -107,6 +107,7 @@ class User(UserMixin, db.Model):
     combination_id = db.Column(db.Integer, db.ForeignKey("subject_combinations.id"), nullable=True)
     campus_id = db.Column(db.Integer, db.ForeignKey("campuses.id"), nullable=True)
     admin_type = db.Column(db.String(30), nullable=True)
+    date_of_birth = db.Column(db.Date, nullable=True)
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -1474,6 +1475,10 @@ def admin_dashboard():
             campus_id_str = request.form.get("campus_id")
             campus_id = int(campus_id_str) if campus_id_str else None
             admin_type = request.form.get("admin_type") if role == "admin" else None
+            dob_str = request.form.get("date_of_birth")
+            date_of_birth = dt.strptime(dob_str, "%Y-%m-%d").date() if (dob_str and role == "student") else None
+            dob_str = request.form.get("date_of_birth")
+            date_of_birth = dt.strptime(dob_str, "%Y-%m-%d").date() if (dob_str and role == "student") else None
             from datetime import datetime as dt
             hire_date = dt.strptime(hire_date_str, "%Y-%m-%d").date() if hire_date_str else None
 
@@ -2576,6 +2581,9 @@ with app.app_context():
     user_columns_5 = [col["name"] for col in inspector.get_columns("users")]
     if "admin_type" not in user_columns_5:
         db.session.execute(text("ALTER TABLE users ADD COLUMN admin_type VARCHAR(30)"))
+        db.session.commit()
+    if "date_of_birth" not in user_columns_5:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN date_of_birth DATE"))
         db.session.commit()
 
     if "grading_scales" not in inspector.get_table_names():

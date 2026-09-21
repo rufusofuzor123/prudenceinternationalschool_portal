@@ -91,9 +91,8 @@
             <div class="form-group"><label>Staff Phone (staff only)</label><input type="text" name="staff_phone" class="form-control"></div>
             <div class="form-group">
                 <label>Campus (optional)</label>
-                <select name="campus_id" class="form-control" required>
-                    <option value="" selected disabled hidden>-- Select --</option>
-                    <option value="">None / Single Campus</option>
+                <select name="campus_id" class="form-control">
+                    <option value="" selected>None / Single Campus</option>
                     {% for c in campuses %}
                     <option value="{{ c.id }}">{{ c.name }}</option>
                     {% endfor %}
@@ -101,8 +100,8 @@
             </div>
             <div class="form-group">
                 <label>Admin Type (only applies if Role = Admin)</label>
-                <select name="admin_type" class="form-control" required>
-                    <option value="" selected disabled hidden>-- Select --</option>
+                <select name="admin_type" class="form-control">
+                    <option value="" selected>N/A (not an admin)</option>
                     <option value="Super Admin">Super Admin (sees everything)</option>
                     <option value="Bursar">Bursar (finance dashboard only)</option>
                 </select>
