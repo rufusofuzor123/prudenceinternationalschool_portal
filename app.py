@@ -1507,7 +1507,8 @@ def admin_dashboard():
                     staff_phone=staff_phone,
                     admission_number=admission_number,
                     campus_id=campus_id,
-                    admin_type=admin_type
+                    admin_type=admin_type,
+                    date_of_birth=date_of_birth
                 )
                 new_user.set_password(password)
                 db.session.add(new_user)
