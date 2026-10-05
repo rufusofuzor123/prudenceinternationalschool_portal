@@ -423,6 +423,16 @@ def get_current_term() -> str:
     return setting.value if setting else "First Term"
 
 
+def get_closing_date():
+    setting = SystemSetting.query.filter_by(key="closing_date").first()
+    return setting.value if setting else "Not set"
+
+
+def get_resumption_date():
+    setting = SystemSetting.query.filter_by(key="resumption_date").first()
+    return setting.value if setting else "Not set"
+
+
 def log_audit(action, details=""):
     from datetime import datetime as dt
     actor_id = current_user.id if current_user.is_authenticated else None
@@ -1552,6 +1562,24 @@ def admin_dashboard():
                     setting.value = new_term
                 db.session.commit()
                 flash(f"Current term set to {new_term}!", "success")
+
+        elif action == "set_term_dates":
+            closing = request.form.get("closing_date")
+            resumption = request.form.get("resumption_date")
+            if closing:
+                s = SystemSetting.query.filter_by(key="closing_date").first()
+                if not s:
+                    db.session.add(SystemSetting(key="closing_date", value=closing))
+                else:
+                    s.value = closing
+            if resumption:
+                s2 = SystemSetting.query.filter_by(key="resumption_date").first()
+                if not s2:
+                    db.session.add(SystemSetting(key="resumption_date", value=resumption))
+                else:
+                    s2.value = resumption
+            db.session.commit()
+            flash("Term dates updated!", "success")
 
         elif action == "set_current_session":
             session_id = request.form.get("session_id")
