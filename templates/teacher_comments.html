@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Term Comments — {{ current_user.assigned_class }}</h2>
+
+<div class="card no-print">
+    <form method="POST">
+        {% for student in students %}
+        <div class="form-group">
+            <label>{{ student.full_name }}</label>
+            <textarea name="comment_{{ student.id }}" class="form-control" rows="2">{{ existing_comments.get(student.id, '') }}</textarea>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Save Comments</button>
+    </form>
+</div>
+{% endblock %}

@@ -379,6 +379,19 @@ class Campus(db.Model):
     address = db.Column(db.String(300), nullable=True)
 
 
+class TermComment(db.Model):
+    __tablename__ = "term_comments"
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey("sessions.id"), nullable=True)
+    term = db.Column(db.String(20), nullable=False)
+    teacher_comment = db.Column(db.Text, nullable=True)
+    principal_comment = db.Column(db.Text, nullable=True)
+
+    student = db.relationship("User", backref="term_comments")
+    session = db.relationship("Session", backref="term_comments")
+
+
 class AcademicResult(db.Model):
     __tablename__ = "academic_results"
     id = db.Column(db.Integer, primary_key=True)
@@ -1287,6 +1300,49 @@ def view_timetable():
     entries = TimetableEntry.query.filter_by(class_name=class_name).all() if class_name else []
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
     return render_template("timetable.html", entries=entries, days=days, class_name=class_name, classes=classes)
+
+
+@app.route("/teacher/comments", methods=["GET", "POST"])
+@login_required
+def teacher_comments():
+    if current_user.role != "teacher":
+        abort(403)
+    if not current_user.assigned_class:
+        abort(403)
+
+    current_session = get_current_session()
+    current_term = get_current_term()
+    class_students = User.query.filter_by(role="student", assigned_class=current_user.assigned_class).all()
+
+    if request.method == "POST":
+        for student in class_students:
+            comment_text = request.form.get(f"comment_{student.id}", "").strip()
+            filter_args = {"student_id": student.id, "term": current_term}
+            if current_session:
+                filter_args["session_id"] = current_session.id
+            existing = TermComment.query.filter_by(**filter_args).first()
+            if existing:
+                existing.teacher_comment = comment_text
+            else:
+                db.session.add(TermComment(
+                    student_id=student.id,
+                    session_id=current_session.id if current_session else None,
+                    term=current_term,
+                    teacher_comment=comment_text
+                ))
+        db.session.commit()
+        flash("Comments saved!", "success")
+        return redirect(url_for("teacher_comments"))
+
+    existing_comments = {}
+    for student in class_students:
+        filter_args = {"student_id": student.id, "term": current_term}
+        if current_session:
+            filter_args["session_id"] = current_session.id
+        tc = TermComment.query.filter_by(**filter_args).first()
+        existing_comments[student.id] = tc.teacher_comment if tc else ""
+
+    return render_template("teacher_comments.html", students=class_students, existing_comments=existing_comments)
 
 
 @app.route("/teacher/attendance", methods=["GET", "POST"])
@@ -2299,6 +2355,49 @@ def outstanding_fees():
     return render_template("outstanding_fees.html", report=report, total_outstanding=total_outstanding)
 
 
+@app.route("/admin/comments", methods=["GET", "POST"])
+@login_required
+def admin_comments():
+    if current_user.role != "admin":
+        abort(403)
+
+    current_session = get_current_session()
+    current_term = get_current_term()
+    all_students = User.query.filter_by(role="student").all()
+
+    if request.method == "POST":
+        for student in all_students:
+            comment_text = request.form.get(f"pcomment_{student.id}", "").strip()
+            if not comment_text:
+                continue
+            filter_args = {"student_id": student.id, "term": current_term}
+            if current_session:
+                filter_args["session_id"] = current_session.id
+            existing = TermComment.query.filter_by(**filter_args).first()
+            if existing:
+                existing.principal_comment = comment_text
+            else:
+                db.session.add(TermComment(
+                    student_id=student.id,
+                    session_id=current_session.id if current_session else None,
+                    term=current_term,
+                    principal_comment=comment_text
+                ))
+        db.session.commit()
+        flash("Principal comments saved!", "success")
+        return redirect(url_for("admin_comments"))
+
+    existing_comments = {}
+    for student in all_students:
+        filter_args = {"student_id": student.id, "term": current_term}
+        if current_session:
+            filter_args["session_id"] = current_session.id
+        tc = TermComment.query.filter_by(**filter_args).first()
+        existing_comments[student.id] = tc.principal_comment if tc else ""
+
+    return render_template("admin_comments.html", students=all_students, existing_comments=existing_comments)
+
+
 @app.route("/admin/staff-records")
 @login_required
 def staff_records():
@@ -2596,6 +2695,9 @@ with app.app_context():
 
     if "campuses" not in inspector.get_table_names():
         Campus.__table__.create(db.engine)
+
+    if "term_comments" not in inspector.get_table_names():
+        TermComment.__table__.create(db.engine)
 
     user_columns_4 = [col["name"] for col in inspector.get_columns("users")]
     if "campus_id" not in user_columns_4:
