@@ -983,6 +983,26 @@ def download_report_card():
     subject_positions = get_subject_positions(current_user)
     class_pos, class_total, class_avg = get_class_position(current_user)
 
+    current_term = get_current_term()
+    overall_total = sum(r.total_score for r in results)
+
+    class_student_ids = [s.id for s in User.query.filter_by(role="student", assigned_class=current_user.assigned_class).all()]
+    attendance_query = Attendance.query.filter(Attendance.student_id.in_(class_student_ids))
+    if current_session:
+        attendance_query = attendance_query.filter(Attendance.session_id == current_session.id)
+    class_attendance = attendance_query.all()
+    times_opened = len({a.date for a in class_attendance})
+    times_present = sum(1 for a in class_attendance if a.student_id == current_user.id and a.status in ("Present", "Late"))
+
+    lowest_scale = GradingScale.query.order_by(GradingScale.min_score.asc()).first()
+    pass_mark = lowest_scale.min_score if lowest_scale else 40.0
+    result_status = "PASS" if class_avg >= pass_mark else "FAIL"
+
+    comment_filter = {"student_id": current_user.id, "term": current_term}
+    if current_session:
+        comment_filter["session_id"] = current_session.id
+    term_comment = TermComment.query.filter_by(**comment_filter).first()
+
     html = render_template(
         "report_card_pdf.html",
         student=current_user,
@@ -991,7 +1011,16 @@ def download_report_card():
         class_position=class_pos,
         class_total=class_total,
         class_average=class_avg,
-        session=current_session
+        session=current_session,
+        term=current_term,
+        overall_total=overall_total,
+        times_opened=times_opened,
+        times_present=times_present,
+        result_status=result_status,
+        teacher_comment=term_comment.teacher_comment if term_comment else "",
+        principal_comment=term_comment.principal_comment if term_comment else "",
+        closing_date=get_closing_date(),
+        resumption_date=get_resumption_date()
     )
 
     pdf_buffer = io.BytesIO()

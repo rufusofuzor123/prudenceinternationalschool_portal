@@ -1,34 +1,40 @@
 <html>
 <head>
 <style>
-    body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #222; }
-    .header-table { width: 100%; border-bottom: 3px solid #003366; padding-bottom: 10px; margin-bottom: 15px; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #222; }
+    .header-table { width: 100%; border-bottom: 3px solid #003366; padding-bottom: 8px; margin-bottom: 10px; }
     .school-name { font-size: 20px; font-weight: bold; color: #003366; }
     .motto { font-style: italic; font-size: 11px; }
     .address { font-size: 10px; }
-    .title { text-align: center; font-size: 16px; font-weight: bold; margin: 15px 0; text-decoration: underline; }
-    .info-table { width: 100%; margin-bottom: 15px; }
-    .info-table td { padding: 3px 0; font-size: 12px; }
-    .results-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .results-table th { background: #003366; color: white; padding: 6px; border: 1px solid #999; font-size: 11px; }
-    .results-table td { padding: 6px; border: 1px solid #999; font-size: 11px; text-align: center; }
-    .summary { margin-top: 15px; font-size: 12px; }
-    .footer { margin-top: 40px; font-size: 10px; text-align: center; color: #666; }
+    .title { text-align: center; font-size: 15px; font-weight: bold; margin: 10px 0; text-decoration: underline; }
+    .info-table { width: 100%; margin-bottom: 10px; }
+    .info-table td { padding: 3px 0; font-size: 11px; }
+    .results-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .results-table th { background: #003366; color: white; padding: 5px; border: 1px solid #999; font-size: 10px; }
+    .results-table td { padding: 5px; border: 1px solid #999; font-size: 10px; text-align: center; }
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .summary-table td { padding: 5px; border: 1px solid #999; font-size: 11px; }
+    .comment-box { border: 1px solid #999; padding: 6px; margin-top: 8px; font-size: 11px; }
+    .sign-table { width: 100%; margin-top: 25px; }
+    .sign-table td { padding: 4px; font-size: 11px; vertical-align: bottom; }
+    .stamp-box { border: 1px dashed #999; height: 70px; text-align: center; font-size: 10px; color: #999; }
+    .footer { margin-top: 20px; font-size: 9px; text-align: center; color: #666; }
 </style>
 </head>
 <body>
 
 <table class="header-table">
     <tr>
-        <td width="70%">
+        <td>
             <div class="school-name">Prudence International School</div>
             <div class="motto">Knowledge, Character, Excellence</div>
             <div class="address">Okpanam, Delta State</div>
+            <div class="address">info@prudenceinternationalschool.edu.ng | +234 800 000 0000</div>
         </td>
     </tr>
 </table>
 
-<div class="title">Terminal Examination Report Card</div>
+<div class="title">Terminal Report Card — {{ term }}</div>
 
 <table class="info-table">
     <tr>
@@ -37,13 +43,25 @@
     </tr>
     <tr>
         <td><strong>Class:</strong> {{ student.assigned_class or 'N/A' }}</td>
+        <td><strong>Number in Class:</strong> {{ class_total }}</td>
+    </tr>
+    <tr>
         <td><strong>Session:</strong> {{ session.name if session else 'N/A' }}</td>
+        <td><strong>Date of Birth:</strong> {{ student.date_of_birth.strftime('%d %B %Y') if student.date_of_birth else 'N/A' }}</td>
+    </tr>
+    <tr>
+        <td><strong>No. of Times School Opened:</strong> {{ times_opened }}</td>
+        <td><strong>No. of Times Present:</strong> {{ times_present }}</td>
+    </tr>
+    <tr>
+        <td><strong>Closing Date:</strong> {{ closing_date }}</td>
+        <td><strong>Resumption Date:</strong> {{ resumption_date }}</td>
     </tr>
 </table>
 
 <table class="results-table">
     <tr>
-        <th>Subject</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total</th><th>Grade</th><th>Position</th><th>Class Avg</th>
+        <th>Subject Offered</th><th>CA1 (20)</th><th>CA2 (20)</th><th>Exam (60)</th><th>Total</th><th>Grade</th><th>Position</th><th>Class Avg</th>
     </tr>
     {% for res in results %}
     <tr>
@@ -59,10 +77,33 @@
     {% endfor %}
 </table>
 
-<div class="summary">
-    <strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}<br/>
-    <strong>Overall Average:</strong> {{ class_average }}
-</div>
+<table class="summary-table">
+    <tr>
+        <td width="25%"><strong>Overall Total Score:</strong> {{ overall_total }}</td>
+        <td width="25%"><strong>Average Score:</strong> {{ class_average }}</td>
+        <td width="25%"><strong>Position in Class:</strong> {{ class_position or 'N/A' }} of {{ class_total }}</td>
+        <td width="25%"><strong>Result Status:</strong> {{ result_status }}</td>
+    </tr>
+</table>
+
+<div class="comment-box"><strong>Class Teacher's Comment:</strong> {{ teacher_comment or 'No comment yet.' }}</div>
+<div class="comment-box"><strong>Principal's Comment:</strong> {{ principal_comment or 'No comment yet.' }}</div>
+
+<table class="sign-table">
+    <tr>
+        <td width="35%">
+            <div class="stamp-box">School Stamp</div>
+        </td>
+        <td width="35%">
+            ______________________________<br/>
+            Principal's Signature
+        </td>
+        <td width="30%">
+            ______________________<br/>
+            Date
+        </td>
+    </tr>
+</table>
 
 <div class="footer">
     This is a computer-generated report card from Prudence International School Portal.
