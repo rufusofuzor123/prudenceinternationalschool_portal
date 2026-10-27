@@ -651,7 +651,7 @@ def get_current_session():
     return Session.query.filter_by(is_current=True).first()
 
 
-def get_subject_positions(student, session_id=None):
+def get_subject_positions(student, session_id=None, term=None):
     positions = {}
     if session_id is None:
         current_session = get_current_session()
@@ -662,6 +662,8 @@ def get_subject_positions(student, session_id=None):
     result_filter = {"student_id": student.id}
     if session_id:
         result_filter["session_id"] = session_id
+    if term:
+        result_filter["term"] = term
     subject_ids = {r.subject_id for r in AcademicResult.query.filter_by(**result_filter).all()}
     for subj_id in subject_ids:
         conditions = [
@@ -670,6 +672,8 @@ def get_subject_positions(student, session_id=None):
         ]
         if session_id:
             conditions.append(AcademicResult.session_id == session_id)
+        if term:
+            conditions.append(AcademicResult.term == term)
         subj_results = AcademicResult.query.filter(*conditions).all()
         ranked = sorted(subj_results, key=lambda r: r.total_score, reverse=True)
         for idx, r in enumerate(ranked, start=1):
@@ -682,7 +686,7 @@ def get_subject_positions(student, session_id=None):
     return positions
 
 
-def get_class_position(student, session_id=None):
+def get_class_position(student, session_id=None, term=None):
     if session_id is None:
         current_session = get_current_session()
         session_id = current_session.id if current_session else None
@@ -692,6 +696,8 @@ def get_class_position(student, session_id=None):
         s_filter = {"student_id": s.id}
         if session_id:
             s_filter["session_id"] = session_id
+        if term:
+            s_filter["term"] = term
         s_results = AcademicResult.query.filter_by(**s_filter).all()
         avg = round(sum(r.total_score for r in s_results) / len(s_results), 2) if s_results else 0
         averages.append((s.id, avg))
@@ -746,6 +752,8 @@ def student_dashboard():
     result_filter = {"student_id": current_user.id}
     if current_session:
         result_filter["session_id"] = current_session.id
+    current_term = get_current_term()
+    result_filter["term"] = current_term
     results = AcademicResult.query.filter_by(**result_filter).all()
     published = is_results_published()
 
@@ -760,8 +768,8 @@ def student_dashboard():
             flash("Passport uploaded successfully!", "success")
             return redirect(url_for("student_dashboard"))
 
-    subject_positions = get_subject_positions(current_user)
-    class_pos, class_total, class_avg = get_class_position(current_user)
+    subject_positions = get_subject_positions(current_user, term=current_term)
+    class_pos, class_total, class_avg = get_class_position(current_user, term=current_term)
 
     attendance_filter = {"student_id": current_user.id}
     if current_session:
@@ -817,8 +825,8 @@ def results_history():
         if selected_term:
             result_filter["term"] = selected_term
         results = AcademicResult.query.filter_by(**result_filter).all()
-        subject_positions = get_subject_positions(current_user, session_id=selected_session_id)
-        class_pos, class_total, class_avg = get_class_position(current_user, session_id=selected_session_id)
+        subject_positions = get_subject_positions(current_user, session_id=selected_session_id, term=selected_term or None)
+        class_pos, class_total, class_avg = get_class_position(current_user, session_id=selected_session_id, term=selected_term or None)
 
     return render_template(
         "results_history.html",
@@ -841,7 +849,7 @@ def register_subjects():
 
     current_session = get_current_session()
     selected_subject_ids = request.form.getlist("subject_ids")
-    delete_filter = {"student_id": current_user.id}
+    delete_filter = {"student_id": current_user.id, "term": get_current_term()}
     if current_session:
         delete_filter["session_id"] = current_session.id
     AcademicResult.query.filter_by(**delete_filter).delete()
@@ -979,11 +987,11 @@ def download_report_card():
     result_filter = {"student_id": current_user.id}
     if current_session:
         result_filter["session_id"] = current_session.id
-    results = AcademicResult.query.filter_by(**result_filter).all()
-    subject_positions = get_subject_positions(current_user)
-    class_pos, class_total, class_avg = get_class_position(current_user)
-
     current_term = get_current_term()
+    result_filter["term"] = current_term
+    results = AcademicResult.query.filter_by(**result_filter).all()
+    subject_positions = get_subject_positions(current_user, term=current_term)
+    class_pos, class_total, class_avg = get_class_position(current_user, term=current_term)
     overall_total = sum(r.total_score for r in results)
 
     class_student_ids = [s.id for s in User.query.filter_by(role="student", assigned_class=current_user.assigned_class).all()]
@@ -1430,6 +1438,7 @@ def grade_class(assignment_id):
             result_filter = {
                 "student_id": student.id,
                 "subject_id": assignment.subject_id,
+                "term": get_current_term(),
             }
             if current_session:
                 result_filter["session_id"] = current_session.id
@@ -1456,7 +1465,7 @@ def grade_class(assignment_id):
 
     student_results = []
     for student in class_students:
-        result_filter = {"student_id": student.id, "subject_id": assignment.subject_id}
+        result_filter = {"student_id": student.id, "subject_id": assignment.subject_id, "term": get_current_term()}
         if current_session:
             result_filter["session_id"] = current_session.id
         res = AcademicResult.query.filter_by(**result_filter).first()
