@@ -686,6 +686,32 @@ def get_subject_positions(student, session_id=None, term=None):
     return positions
 
 
+def get_term_summary(student, session_id, term):
+    classmates = User.query.filter_by(role="student", assigned_class=student.assigned_class).all()
+    averages = []
+    my_total = 0
+    my_count = 0
+    for s in classmates:
+        s_filter = {"student_id": s.id, "term": term}
+        if session_id:
+            s_filter["session_id"] = session_id
+        s_results = AcademicResult.query.filter_by(**s_filter).all()
+        total = sum(r.total_score for r in s_results)
+        avg = round(total / len(s_results), 2) if s_results else 0
+        averages.append((s.id, avg))
+        if s.id == student.id:
+            my_total = total
+            my_count = len(s_results)
+    averages.sort(key=lambda x: x[1], reverse=True)
+    position = None
+    for idx, (sid, avg) in enumerate(averages, start=1):
+        if sid == student.id:
+            position = idx
+            break
+    my_avg = round(my_total / my_count, 2) if my_count else 0
+    return {"total": my_total, "average": my_avg, "position": position, "class_total": len(averages), "subject_count": my_count}
+
+
 def get_class_position(student, session_id=None, term=None):
     if session_id is None:
         current_session = get_current_session()
@@ -1006,6 +1032,22 @@ def download_report_card():
     pass_mark = lowest_scale.min_score if lowest_scale else 40.0
     result_status = "PASS" if class_avg >= pass_mark else "FAIL"
 
+    cumulative = None
+    cumulative_total = 0
+    cumulative_average = 0
+    promotion_status = None
+    if current_term == "Third Term":
+        sid = current_session.id if current_session else None
+        cumulative = []
+        for t in ["First Term", "Second Term", "Third Term"]:
+            summary = get_term_summary(current_user, sid, t)
+            summary["term"] = t
+            cumulative.append(summary)
+        counted = [c for c in cumulative if c["subject_count"] > 0]
+        cumulative_total = round(sum(c["total"] for c in counted), 2)
+        cumulative_average = round(sum(c["average"] for c in counted) / len(counted), 2) if counted else 0
+        promotion_status = "PROMOTED" if cumulative_average >= pass_mark else "NOT PROMOTED"
+
     comment_filter = {"student_id": current_user.id, "term": current_term}
     if current_session:
         comment_filter["session_id"] = current_session.id
@@ -1028,7 +1070,11 @@ def download_report_card():
         teacher_comment=term_comment.teacher_comment if term_comment else "",
         principal_comment=term_comment.principal_comment if term_comment else "",
         closing_date=get_closing_date(),
-        resumption_date=get_resumption_date()
+        resumption_date=get_resumption_date(),
+        cumulative=cumulative,
+        cumulative_total=cumulative_total,
+        cumulative_average=cumulative_average,
+        promotion_status=promotion_status
     )
 
     pdf_buffer = io.BytesIO()

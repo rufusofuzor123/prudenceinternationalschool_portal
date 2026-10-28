@@ -86,6 +86,30 @@
     </tr>
 </table>
 
+{% if cumulative %}
+<div class="title" style="font-size:13px; margin-top:12px;">Cumulative Summary (Third Term)</div>
+<table class="results-table">
+    <tr><th>Term</th><th>Total Score</th><th>Average Score</th><th>Class Position</th></tr>
+    {% for c in cumulative %}
+    <tr>
+        <td>{{ c.term }}</td>
+        {% if c.subject_count > 0 %}
+        <td>{{ c.total }}</td><td>{{ c.average }}</td><td>{{ c.position or 'N/A' }} of {{ c.class_total }}</td>
+        {% else %}
+        <td colspan="3">No results recorded</td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+<table class="summary-table">
+    <tr>
+        <td width="34%"><strong>Cumulative Total:</strong> {{ cumulative_total }}</td>
+        <td width="33%"><strong>Cumulative Average:</strong> {{ cumulative_average }}</td>
+        <td width="33%"><strong>Promotion Status:</strong> {{ promotion_status }}</td>
+    </tr>
+</table>
+{% endif %}
+
 <div class="comment-box"><strong>Class Teacher's Comment:</strong> {{ teacher_comment or 'No comment yet.' }}</div>
 <div class="comment-box"><strong>Principal's Comment:</strong> {{ principal_comment or 'No comment yet.' }}</div>
 
