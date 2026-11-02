@@ -20,6 +20,50 @@
     </header>
     {% if current_user.is_authenticated %}
     <div class="navbar no-print">
+        <details class="menu">
+            <summary>&#9776; Menu</summary>
+            <div class="menu-list">
+                {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+                    {% if current_user.admin_type == 'Bursar' %}
+                        <a href="{{ url_for('admin_payroll') }}">Payroll</a>
+                        <a href="{{ url_for('admin_expenses') }}">Expenses</a>
+                        <a href="{{ url_for('outstanding_fees') }}">Outstanding Fees</a>
+                        <a href="{{ url_for('revenue_projections') }}">Revenue Projections</a>
+                    {% else %}
+                        <a href="{{ url_for('global_search') }}">Global Search</a>
+                        <a href="{{ url_for('staff_records') }}">Staff Records</a>
+                        <a href="{{ url_for('admin_payroll') }}">Payroll</a>
+                        <a href="{{ url_for('admin_expenses') }}">Expenses</a>
+                        <a href="{{ url_for('outstanding_fees') }}">Outstanding Fees</a>
+                        <a href="{{ url_for('revenue_projections') }}">Revenue Projections</a>
+                        <a href="{{ url_for('audit_trail') }}">Audit Trail</a>
+                        <a href="{{ url_for('record_retention') }}">Record Retention</a>
+                        <a href="{{ url_for('admin_comments') }}">Principal Comments</a>
+                    {% endif %}
+                {% elif current_user.role == 'teacher' %}
+                    <a href="{{ url_for('teacher_dashboard') }}">Dashboard</a>
+                    {% if current_user.assigned_class %}
+                        <a href="{{ url_for('mark_attendance') }}">Mark Attendance</a>
+                        <a href="{{ url_for('teacher_comments') }}">Term Comments</a>
+                    {% endif %}
+                    <a href="{{ url_for('view_timetable') }}">Timetable</a>
+                    <a href="{{ url_for('teacher_assignments') }}">Assignments</a>
+                    <a href="{{ url_for('teacher_quizzes') }}">Quizzes</a>
+                {% elif current_user.role == 'student' %}
+                    <a href="{{ url_for('student_dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('view_timetable') }}">Timetable</a>
+                    <a href="{{ url_for('list_receipts') }}">My Receipts</a>
+                    <a href="{{ url_for('results_history') }}">Past Results</a>
+                    <a href="{{ url_for('student_assignments') }}">Assignments</a>
+                    <a href="{{ url_for('student_quizzes') }}">Quizzes</a>
+                {% elif current_user.role == 'parent' %}
+                    <a href="{{ url_for('parent_dashboard') }}">Dashboard</a>
+                {% endif %}
+                <a href="{{ url_for('view_calendar') }}">School Calendar</a>
+                <a href="{{ url_for('inbox') }}">Messages</a>
+            </div>
+        </details>
         <span>Logged in as: <strong>{{ current_user.full_name }}</strong> ({{ current_user.role|capitalize }})</span>
         <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a> <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
     </div>
